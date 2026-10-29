@@ -1,17 +1,43 @@
 @import "tailwindcss";
 
-:root {
-  font-family: Arial, sans-serif;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@theme {
+  --font-sans: "Open Sans", sans-serif;
+  --font-serif: "Roboto Serif", serif;
+
+  --color-primary: #245bc4;
+  --color-primary-hover: #1e4da6;
+  --color-secondary: #d9d9d9;
+  --color-secondary-hover: #c8c8c8;
+  --color-section: #f8f8f8;
+  --color-sidebar: #182b49;
 }
 
-body {
-  margin: 0;
+@layer base {
+  :root {
+    font-family: var(--font-sans);
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
 }
 
-#root {
-  min-height: 100vh;
+@layer components {
+  .btn-primary {
+    @apply rounded-lg bg-primary font-semibold text-white hover:bg-primary-hover;
+  }
+  .btn-secondary {
+    @apply rounded-lg bg-secondary font-semibold text-black hover:bg-secondary-hover;
+  }
+  .card {
+    @apply rounded-xl bg-section p-6;
+  }
 }
