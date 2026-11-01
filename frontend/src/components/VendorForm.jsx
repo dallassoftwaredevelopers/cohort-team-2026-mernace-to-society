@@ -45,7 +45,7 @@ function VendorForm(){
           .filter(Boolean),
       };
 
-      const { error } = await supabase.functions.invoke("create-Vendor", {
+      const { error } = await supabase.functions.invoke("create-vendor", {
         body: vendorData,
       });
 
@@ -139,7 +139,6 @@ return(
             value={formData.email}
             onChange={handleChange}
             className={inputClassName}
-            required
           />
         </div>
 
@@ -158,7 +157,6 @@ return(
             value={formData.phone_number}
             onChange={handleChange}
             className={inputClassName}
-            required
           />
         </div>
 
