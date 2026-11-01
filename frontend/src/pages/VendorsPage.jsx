@@ -1,4 +1,5 @@
 import Sidebar from "../components/Sidebar";
+import Footer from "../components/Footer";
 
 const cards = [
   { title: "Total Vendors", value: "0", note: "Across 0 service types" },
@@ -31,6 +32,7 @@ function VendorsPage() {
   return (
     <div className="flex min-h-screen bg-white text-black">
       <Sidebar />
+      <div className="flex min-w-0 flex-1 flex-col">
       <main className="min-w-0 flex-1 p-4 md:p-8">
         <section className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="font-serif text-2xl font-bold">Vendors</h1>
@@ -124,6 +126,8 @@ function VendorsPage() {
           ))}
         </section>
       </main>
+      <Footer />
+      </div>
     </div>
   );
 }

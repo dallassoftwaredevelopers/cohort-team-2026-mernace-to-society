@@ -14,17 +14,27 @@
 
 ## Running locally
 
-### Backend
+<!-- ### Backend
 
 1. `cd backend/`
 2. `npm install`
 3. `copy .env.example into a .env file`
 4. `npm run dev`
-5. Verify: `GET http://localhost:3000/api/v1/health` returns `{ status: "ok" }`
+5. Verify: `GET http://localhost:3000/api/v1/health` returns `{ status: "ok" }` -->
+
+### Start Supabase
+
+1. cd into repo root
+2. 'supabase start'
+-this creates information you will use in step four:
+3. create .env in root directory
+4. in .env file add these two lines of code:
+-'VITE_SUPABASE_URL=ADDRESS-FROM-URL'
+-'VITE_SUPABASE_PUBLISHABLE_KEY=NUMBER-FROM-SECRET-KEY'
 
 ### Frontend
 
-1. `cd backend/`
+1. `cd frontend/`
 2. `npm install`
 3. `npm run dev`
-4. open in browser Local: http://localhost:[specified port number]/ 
+4. open in browser http://localhost:5173/
