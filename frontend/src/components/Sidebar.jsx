@@ -1,5 +1,6 @@
 
-import { Link, NavLink } from "react-router-dom"
+import { Link, NavLink, useNavigate } from "react-router-dom"
+import { supabase } from "../../utils/supabase"
 
 const navigationItems = [
   { to: "/dashboard", label: "Dashboard" },
@@ -17,6 +18,12 @@ const navigationClassName = ({ isActive }) =>
   }`
 
 function Sidebar() {
+  const navigate = useNavigate();
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    navigate("/login");
+  }
   return (
     <aside className="flex min-h-screen w-64 shrink-0 flex-col border-r border-[#2B405D] bg-[#192D4A] px-5 py-6">
       <h1 className="mb-10 text-2xl font-bold text-white">Billio</h1>
@@ -36,7 +43,7 @@ function Sidebar() {
         >
           Account Settings
         </Link>
-
+        
         <div className="flex items-center gap-3 px-2">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#8A9BB6] font-semibold text-[#192D4A]">
             RS
@@ -47,6 +54,12 @@ function Sidebar() {
             <p className="text-xs text-slate-300">Admin</p>
           </div>
         </div>
+        <button
+          onClick={handleLogout}
+          className="mb-5 mt-5 block w-full rounded-lg px-4 py-3 text-left text-slate-100 transition hover:bg-[#2B405D]"
+        >
+          Log out
+        </button>
       </div>
     </aside>
   );

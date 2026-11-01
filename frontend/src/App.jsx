@@ -1,6 +1,7 @@
 //import { supabase } from '../utils/supabase'
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
+import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import BillsPage from "./pages/BillsPage";
 import UploadBillPage from "./pages/UploadBillPage";
@@ -18,6 +19,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/bills" element={<BillsPage />} />
         <Route path="/bills/upload" element={<UploadBillPage />} />
