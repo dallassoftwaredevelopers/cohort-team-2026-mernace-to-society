@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
 import { useProperties } from "../hooks/useProperties";
-
+//comment so I can git add and push
 const initialFormData = {
 	name: "",
 	street: "",
