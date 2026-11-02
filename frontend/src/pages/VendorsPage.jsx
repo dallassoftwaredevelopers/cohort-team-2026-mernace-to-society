@@ -1,5 +1,6 @@
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
+import {Link} from "react-router-dom";
 
 const cards = [
   { title: "Total Vendors", value: "0", note: "Across 0 service types" },
@@ -36,9 +37,11 @@ function VendorsPage() {
       <main className="min-w-0 flex-1 p-4 md:p-8">
         <section className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="font-serif text-2xl font-bold">Vendors</h1>
-          <button className="btn-primary px-5 py-3 text-sm">
-            + Add Vendor
-          </button>
+          
+            <Link to="/vendors-form"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg inline-block transition-colors">Add Vendor
+            </Link>
+        
         </section>
 
         {/* Search */}

@@ -50,8 +50,14 @@ function VendorForm(){
       });
 
       if (error) {
-        throw error;
+        console.log("Vendor error:", error);
+
+        const response = await error.context.json();
+        console.log("Actual error message:", response);
       }
+      // if (error) {
+      //   throw error;
+      // }
 
       setSuccessMessage("Vendor details submitted successfully.");
     } catch (error) {
