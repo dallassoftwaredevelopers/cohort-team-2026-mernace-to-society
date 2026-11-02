@@ -12,6 +12,7 @@ import ApprovalsPage from "./pages/ApprovalsPage";
 import TermsOfServicePage from "./pages/TermsOfServicePage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import FunctionTestPage from "./pages/FunctionTestPage";
+import AccountSettingsPage from "./pages/AccountSettingsPage";
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
         <Route path="/approvals" element={<ApprovalsPage />} />
         <Route path="/terms-of-service" element={<TermsOfServicePage />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+        <Route path="/settings" element={<AccountSettingsPage />} />
         {/* Dev-only page for calling edge functions directly */}
         <Route path="/dev/functions" element={<FunctionTestPage />} />
       </Routes>
