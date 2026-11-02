@@ -429,3 +429,23 @@ entrypoint = "./functions/create-bill/index.js"
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/create-vendor/index.js"
+
+[functions.create-property]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/create-property/index.js"
+
+[functions.read-properties]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/read-properties/index.js"
+
+[functions.update-property]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/update-property/index.js"
+
+[functions.delete-property]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/delete-property/index.js"
