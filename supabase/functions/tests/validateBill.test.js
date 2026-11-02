@@ -1,15 +1,21 @@
 import { assertEquals } from 'jsr:@std/assert';
 import { validateBill } from '../_shared/validateBill.js';
 
-const valid = { name: 'Electric', amount: 120.5, due_date: '2026-11-01' };
+const valid = {
+	invoice_number: 'INV-00123',
+	amount: 120.5,
+	issue_date: '2026-10-15',
+	due_date: '2026-11-01',
+	vendor_account_id: '3f2b8c1e-9a4d-4e6f-8b7a-1c2d3e4f5a6b',
+};
 
 Deno.test('accepts a valid bill', () => {
 	assertEquals(validateBill(valid), { ok: true, value: valid });
 });
 
-Deno.test('trims the name', () => {
-	const result = validateBill({ ...valid, name: '  Electric  ' });
-	assertEquals(result.value.name, 'Electric');
+Deno.test('trims the invoice number', () => {
+	const result = validateBill({ ...valid, invoice_number: '  INV-00123  ' });
+	assertEquals(result.value.invoice_number, 'INV-00123');
 });
 
 Deno.test('rounds amount to cents', () => {
@@ -17,10 +23,17 @@ Deno.test('rounds amount to cents', () => {
 	assertEquals(result.value.amount, 10.46);
 });
 
+Deno.test('allows due date on the issue date', () => {
+	const result = validateBill({ ...valid, due_date: valid.issue_date });
+	assertEquals(result.ok, true);
+});
+
 Deno.test("drops fields the user shouldn't control", () => {
 	const result = validateBill({
 		...valid,
-		user_id: 'someone-else',
+		created_by: 'someone-else',
+		org_id: 'another-org',
+		property_id: 'some-other-property',
 		status: 'paid',
 	});
 	assertEquals(result, { ok: true, value: valid });
@@ -29,9 +42,10 @@ Deno.test("drops fields the user shouldn't control", () => {
 const invalidCases = [
 	['null body', null],
 	['array body', [valid]],
-	['missing name', { ...valid, name: undefined }],
-	['blank name', { ...valid, name: '   ' }],
-	['name too long', { ...valid, name: 'x'.repeat(101) }],
+	['missing invoice number', { ...valid, invoice_number: undefined }],
+	['blank invoice number', { ...valid, invoice_number: '   ' }],
+	['invoice number too long', { ...valid, invoice_number: 'x'.repeat(51) }],
+	['invoice number as number', { ...valid, invoice_number: 123 }],
 	['amount as string', { ...valid, amount: '120.50' }],
 	['zero amount', { ...valid, amount: 0 }],
 	['negative amount', { ...valid, amount: -50 }],
@@ -39,10 +53,18 @@ const invalidCases = [
 	['NaN amount', { ...valid, amount: NaN }],
 	['Infinity amount', { ...valid, amount: Infinity }],
 	['huge amount', { ...valid, amount: 5_000_000 }],
-	['wrong date format', { ...valid, due_date: '11/01/2026' }],
-	['date words', { ...valid, due_date: 'November 1' }],
-	['impossible date', { ...valid, due_date: '2026-02-30' }],
-	['date as number', { ...valid, due_date: 20261101 }],
+	['missing issue date', { ...valid, issue_date: undefined }],
+	['wrong issue date format', { ...valid, issue_date: '10/15/2026' }],
+	['impossible issue date', { ...valid, issue_date: '2026-02-30' }],
+	['missing due date', { ...valid, due_date: undefined }],
+	['wrong due date format', { ...valid, due_date: '11/01/2026' }],
+	['due date words', { ...valid, due_date: 'November 1' }],
+	['impossible due date', { ...valid, due_date: '2026-02-30' }],
+	['due date as number', { ...valid, due_date: 20261101 }],
+	['due date before issue date', { ...valid, due_date: '2026-10-01' }],
+	['missing vendor account', { ...valid, vendor_account_id: undefined }],
+	['vendor account not a uuid', { ...valid, vendor_account_id: 'FPL' }],
+	['vendor account as number', { ...valid, vendor_account_id: 42 }],
 ];
 
 for (const [label, input] of invalidCases) {
