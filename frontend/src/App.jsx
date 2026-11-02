@@ -20,9 +20,17 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/bills" element={<BillsPage />} />
+        <Route path="/bills/upload" element={<UploadBillPage />} />
+        <Route path="/bills/manual" element={<ManualBillIntakePage />} />
         {/* <Route path="/billintake" element={<BillIntakePage />} /> */}
         <Route path="/properties" element={<PropertiesPage />} />
         <Route path="/vendors" element={<VendorsPage />} />
+        <Route path="/approvals" element={<ApprovalsPage />} />
+        <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+        {/* Dev-only page for calling edge functions directly */}
+        <Route path="/dev/functions" element={<FunctionTestPage />} />
       </Routes>
     </BrowserRouter>
   );
