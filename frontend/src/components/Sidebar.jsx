@@ -8,7 +8,6 @@ const navigationItems = [
   { to: "/properties", label: "Properties" },
   { to: "/vendors", label: "Vendors" },
   { to: "/approvals", label: "Approvals" },
-  { to: "/propertytest", label: "PropertyTest" },
 ]
 
 const navigationClassName = ({ isActive }) =>
