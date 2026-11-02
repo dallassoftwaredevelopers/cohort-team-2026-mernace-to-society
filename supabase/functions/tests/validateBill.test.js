@@ -2,6 +2,7 @@ import { assertEquals } from 'jsr:@std/assert';
 import { validateBill } from '../_shared/validateBill.js';
 
 const valid = {
+	invoice_number: 'INV-00123',
 	amount: 120.5,
 	issue_date: '2026-10-15',
 	due_date: '2026-11-01',
@@ -10,6 +11,11 @@ const valid = {
 
 Deno.test('accepts a valid bill', () => {
 	assertEquals(validateBill(valid), { ok: true, value: valid });
+});
+
+Deno.test('trims the invoice number', () => {
+	const result = validateBill({ ...valid, invoice_number: '  INV-00123  ' });
+	assertEquals(result.value.invoice_number, 'INV-00123');
 });
 
 Deno.test('rounds amount to cents', () => {
@@ -36,6 +42,10 @@ Deno.test("drops fields the user shouldn't control", () => {
 const invalidCases = [
 	['null body', null],
 	['array body', [valid]],
+	['missing invoice number', { ...valid, invoice_number: undefined }],
+	['blank invoice number', { ...valid, invoice_number: '   ' }],
+	['invoice number too long', { ...valid, invoice_number: 'x'.repeat(51) }],
+	['invoice number as number', { ...valid, invoice_number: 123 }],
 	['amount as string', { ...valid, amount: '120.50' }],
 	['zero amount', { ...valid, amount: 0 }],
 	['negative amount', { ...valid, amount: -50 }],

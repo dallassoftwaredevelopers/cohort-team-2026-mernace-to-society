@@ -89,10 +89,11 @@ function BillDetailsForm() {
 		setSuccessMessage('');
 
 		try {
-			// Only send fields the bill table has columns for. Invoice number and
-			// approver stay in the UI until the table supports them. The edge function looks up property_id from the vendor account.
+			// Only send fields the bill table has columns for. Approver stays in
+			// the UI until the table supports it. The edge function looks up property_id from the vendor account.
 			const { error } = await supabase.functions.invoke('create-bill', {
 				body: {
+					invoice_number: formData.invoiceNumber,
 					amount: Number(formData.amount),
 					issue_date: formData.invoiceDate,
 					due_date: formData.dueDate,

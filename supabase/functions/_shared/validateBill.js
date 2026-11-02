@@ -25,7 +25,15 @@ export function validateBill(body) {
 
 	// Only these fields are read. Anything else in the body is ignored. We can always add more!
 	// property_id isn't read either: the edge function looks it up from the vendor account.
-	const { amount, issue_date, due_date, vendor_account_id } = body;
+	const { invoice_number, amount, issue_date, due_date, vendor_account_id } =
+		body;
+
+	if (typeof invoice_number !== 'string' || invoice_number.trim().length === 0) {
+		return { ok: false, error: 'Invoice number is required' };
+	}
+	if (invoice_number.trim().length > 50) {
+		return { ok: false, error: 'Invoice number must be 50 characters or less' };
+	}
 
 	if (typeof amount !== 'number' || !Number.isFinite(amount)) {
 		return { ok: false, error: 'Amount must be a number' };
@@ -60,6 +68,12 @@ export function validateBill(body) {
 
 	return {
 		ok: true,
-		value: { amount: rounded, issue_date, due_date, vendor_account_id },
+		value: {
+			invoice_number: invoice_number.trim(),
+			amount: rounded,
+			issue_date,
+			due_date,
+			vendor_account_id,
+		},
 	};
 }

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../utils/supabase';
 
 const billColumns = [
+	'Invoice number',
 	'Property',
 	'Vendor',
 	'Issue date',
@@ -28,7 +29,7 @@ function BillsPage() {
 			const { data, error } = await supabase
 				.from('bill')
 				.select(
-					'id, issue_date, due_date, amount, status, extracted_vendor_name, property(name), vendor_account(service, vendor(name))',
+					'id, invoice_number, issue_date, due_date, amount, status, extracted_vendor_name, property(name), vendor_account(service, vendor(name))',
 				)
 				.order('due_date', { ascending: true });
 
@@ -133,6 +134,7 @@ function BillsPage() {
 								) : (
 									bills.map((bill) => (
 										<tr key={bill.id} className="border-t border-gray-200">
+											<td className="px-4 py-3">{bill.invoice_number ?? '—'}</td>
 											<td className="px-4 py-3">{bill.property?.name ?? '—'}</td>
 											<td className="px-4 py-3">
 												{/* Uploaded bills may only have the AI-extracted vendor name */}
