@@ -17,10 +17,6 @@ function UploadBillPage() {
             <p className="mt-2 text-sm text-gray-600">
               Upload a bill document or image, then review and complete its details.
             </p>
-            <p className="mt-2 text-sm text-gray-600">
-              File upload and automatic extraction are not connected yet;
-              selecting a file does not send or save it.
-            </p>
           </div>
           <Link
             to="/bills"
