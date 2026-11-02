@@ -185,74 +185,74 @@ function PropertiesPage() {
 	}
 
 	return (
-		<div className="flex min-h-screen bg-gray-50">
+		<div className="flex min-h-screen bg-white text-black">
 			<Sidebar />
 
 			<div className="flex min-w-0 flex-1 flex-col">
-				<main className="min-w-0 flex-1 p-4 sm:p-8">
+				<main className="min-w-0 flex-1 p-4 md:p-8">
 
 					{/* Page Header */}
 					<section className="flex flex-wrap items-center justify-between gap-4">
-						<h2 className="text-2xl font-bold text-[#192D4A]">
+						<h1 className="font-serif text-2xl font-bold">
 							Properties
-						</h2>
+						</h1>
 
 						<button
 							type="button"
 							onClick={openAddForm}
-							className="rounded-lg bg-[#192D4A] px-5 py-3 font-medium text-white hover:bg-[#263F60]"
+							className="btn-primary px-5 py-3 text-sm"
 						>
 							+ Add Property
 						</button>
 					</section>
 
 					{/* Dashboard Statistics */}
-					<section className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+					<section className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
 
-						<div className="rounded-2xl border border-gray-200 bg-white p-6">
-							<h3 className="text-gray-600">
+						<div className="card">
+							<h3 className="text-sm font-semibold">
 								Total Properties
 							</h3>
-							<p className="py-3 text-3xl text-[#192D4A]">
+							<p className="mt-3 text-3xl font-bold">
 								{totalProperties}
 							</p>
-							<p className="text-gray-600">
+							<p className="mt-1 text-xs">
 								Across {groupedProperties.length} property types
 							</p>
 						</div>
 
-						<div className="rounded-2xl border border-gray-200 bg-white p-6">
-							<h3 className="text-gray-600">
+						<div className="card">
+							<h3 className="text-sm font-semibold">
 								Residential
 							</h3>
-							<p className="py-3 text-3xl text-[#192D4A]">
+							<p className="mt-3 text-3xl font-bold">
 								{residentialCount}
 							</p>
-							<p className="text-gray-600">
+							<p className="mt-1 text-xs">
 								Residential properties
 							</p>
 						</div>
 
-						<div className="rounded-2xl border border-gray-200 bg-white p-6">
-							<h3 className="text-gray-600">
+						<div className="card">
+							<h3 className="text-sm font-semibold">
 								Commercial
 							</h3>
-							<p className="py-3 text-3xl text-[#192D4A]">
+							<p className="mt-3 text-3xl font-bold">
 								{commercialCount}
 							</p>
-							<p className="text-gray-600">
+							<p className="mt-1 text-xs">
 								Commercial properties
 							</p>
 						</div>
 
-						<div className="rounded-2xl border border-gray-200 bg-white p-6">
-							<h3 className="text-gray-600">
+						<div className="card">
+							<h3 className="text-sm font-semibold">
 								Active Properties
 							</h3>
-							<p className="py-3 text-3xl text-[#192D4A]">
+							<p className="mt-3 text-3xl font-bold">
 								{activeCount}
 							</p>
-							<p className="text-gray-600">
+							<p className="mt-1 text-xs">
 								{totalProperties - activeCount} inactive properties
 							</p>
 						</div>
@@ -279,35 +279,35 @@ function PropertiesPage() {
 					)}
 
 					{/* Properties by Type */}
-					<section className="mt-8">
-						<div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-							<h3 className="text-xl font-semibold text-[#192D4A]">
-								Properties by type
-							</h3>
+					<section className="card mt-8">
+						<div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-black pb-4">
+							<h2 className="text-lg font-bold">
+								Properties by Type
+							</h2>
 
-							<p className="text-gray-500">
+							<p className="text-sm">
 								{totalProperties} total properties
 							</p>
 						</div>
 
-						<div className="space-y-4 rounded-2xl border border-gray-200 bg-white p-4 sm:p-5">
+						<div className="space-y-4">
 
 							{loading ? (
-								<p className="py-8 text-center text-gray-500">
+								<p className="py-8 text-center text-sm">
 									Loading properties...
 								</p>
 							) : properties.length === 0 ? (
 								<div className="py-10 text-center">
-									<h4 className="font-semibold text-[#192D4A]">
+									<h3 className="font-semibold">
 										No properties yet
-									</h4>
-									<p className="mt-2 text-sm text-gray-500">
+									</h3>
+									<p className="mt-2 text-sm">
 										Add your first property to get started.
 									</p>
 									<button
 										type="button"
 										onClick={openAddForm}
-										className="mt-4 rounded-lg bg-[#192D4A] px-5 py-2 text-sm font-medium text-white"
+										className="btn-primary mt-4 px-5 py-2 text-sm"
 									>
 										Add Property
 									</button>
@@ -316,20 +316,20 @@ function PropertiesPage() {
 								groupedProperties.map(([type, typeProperties]) => (
 									<section
 										key={type}
-										className="border-b border-gray-200 pb-4 last:border-b-0 last:pb-0"
+										className="border-b border-section pb-4 last:border-b-0 last:pb-0"
 									>
 										<div className="mb-2 flex items-center justify-between gap-2">
-											<h4 className="font-semibold text-[#192D4A]">
+											<h3 className="font-semibold">
 												{type}
-											</h4>
-											<p className="text-gray-500">
+											</h3>
+											<p className="text-xs">
 												{typeProperties.length} properties
 											</p>
 										</div>
 
-										<div className="overflow-x-auto rounded-xl border border-gray-200">
+										<div className="overflow-x-auto rounded-lg bg-white">
 											<table className="w-full min-w-[650px] text-left text-sm">
-												<thead className="bg-gray-100 text-[#192D4A]">
+												<thead className="text-xs uppercase">
 													<tr>
 														<th className="px-4 py-3 font-semibold">
 															Property Name
@@ -346,7 +346,7 @@ function PropertiesPage() {
 													</tr>
 												</thead>
 
-												<tbody className="divide-y divide-gray-100 text-gray-600">
+												<tbody>
 													{typeProperties.map((property) => {
 														const address = [
 															property.street,
@@ -363,8 +363,11 @@ function PropertiesPage() {
 															.join(", ");
 
 														return (
-															<tr key={property.id}>
-																<td className="whitespace-nowrap px-4 py-3 font-medium text-[#192D4A]">
+															<tr
+																key={property.id}
+																className="border-t border-section"
+															>
+																<td className="whitespace-nowrap px-4 py-3 font-medium">
 																	{property.name}
 																</td>
 
@@ -378,11 +381,7 @@ function PropertiesPage() {
 																		onClick={() =>
 																			handleStatusChange(property)
 																		}
-																		className={`rounded-full px-3 py-1 text-xs font-medium ${
-																			property.status === "active"
-																				? "bg-green-50 text-green-700"
-																				: "bg-gray-100 text-gray-600"
-																		}`}
+																		className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-black"
 																		title="Click to change status"
 																	>
 																		{property.status === "active"
@@ -398,7 +397,7 @@ function PropertiesPage() {
 																			onClick={() =>
 																				openEditForm(property)
 																			}
-																			className="font-medium text-blue-600 hover:text-blue-800"
+																			className="font-medium text-primary hover:text-primary-hover"
 																		>
 																			Edit
 																		</button>
@@ -408,7 +407,7 @@ function PropertiesPage() {
 																			onClick={() =>
 																				handleDelete(property)
 																			}
-																			className="font-medium text-red-600 hover:text-red-800"
+																			className="font-medium text-red-700 hover:text-red-900"
 																		>
 																			Delete
 																		</button>
@@ -434,17 +433,17 @@ function PropertiesPage() {
 			{/* Add / Edit Property Modal */}
 			{showForm && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
-					<div className="my-auto w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
+					<div className="my-auto w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl">
 
 						<div className="mb-6 flex items-center justify-between">
-							<h3 className="text-xl font-bold text-[#192D4A]">
+							<h2 className="text-xl font-bold">
 								{editingProperty ? "Edit Property" : "Add Property"}
-							</h3>
+							</h2>
 
 							<button
 								type="button"
 								onClick={closeForm}
-								className="text-2xl text-gray-400 hover:text-gray-700"
+								className="text-2xl text-gray-500 hover:text-black"
 								aria-label="Close form"
 							>
 								&times;
@@ -456,7 +455,7 @@ function PropertiesPage() {
 							<div>
 								<label
 									htmlFor="name"
-									className="mb-1 block text-sm font-medium text-gray-700"
+									className="mb-1 block text-sm font-medium"
 								>
 									Property Name
 								</label>
@@ -476,7 +475,7 @@ function PropertiesPage() {
 							<div>
 								<label
 									htmlFor="type"
-									className="mb-1 block text-sm font-medium text-gray-700"
+									className="mb-1 block text-sm font-medium"
 								>
 									Property Type
 								</label>
@@ -501,7 +500,7 @@ function PropertiesPage() {
 							<div>
 								<label
 									htmlFor="street"
-									className="mb-1 block text-sm font-medium text-gray-700"
+									className="mb-1 block text-sm font-medium"
 								>
 									Street Address
 								</label>
@@ -520,7 +519,7 @@ function PropertiesPage() {
 								<div>
 									<label
 										htmlFor="city"
-										className="mb-1 block text-sm font-medium text-gray-700"
+										className="mb-1 block text-sm font-medium"
 									>
 										City
 									</label>
@@ -538,7 +537,7 @@ function PropertiesPage() {
 								<div>
 									<label
 										htmlFor="state"
-										className="mb-1 block text-sm font-medium text-gray-700"
+										className="mb-1 block text-sm font-medium"
 									>
 										State
 									</label>
@@ -556,7 +555,7 @@ function PropertiesPage() {
 								<div>
 									<label
 										htmlFor="zip"
-										className="mb-1 block text-sm font-medium text-gray-700"
+										className="mb-1 block text-sm font-medium"
 									>
 										ZIP Code
 									</label>
@@ -576,7 +575,7 @@ function PropertiesPage() {
 								<div>
 									<label
 										htmlFor="status"
-										className="mb-1 block text-sm font-medium text-gray-700"
+										className="mb-1 block text-sm font-medium"
 									>
 										Status
 									</label>
@@ -599,12 +598,12 @@ function PropertiesPage() {
 								</p>
 							)}
 
-							<div className="flex justify-end gap-3 border-t border-gray-200 pt-5">
+							<div className="flex justify-end gap-3 border-t border-section pt-5">
 								<button
 									type="button"
 									onClick={closeForm}
 									disabled={isSubmitting}
-									className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+									className="btn-secondary px-4 py-2 text-sm"
 								>
 									Cancel
 								</button>
@@ -612,7 +611,7 @@ function PropertiesPage() {
 								<button
 									type="submit"
 									disabled={isSubmitting}
-									className="rounded-lg bg-[#192D4A] px-5 py-2 text-sm font-medium text-white hover:bg-[#263F60] disabled:cursor-not-allowed disabled:opacity-60"
+									className="btn-primary px-5 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
 								>
 									{isSubmitting
 										? "Saving..."
