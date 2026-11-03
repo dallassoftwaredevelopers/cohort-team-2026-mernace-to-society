@@ -49,6 +49,7 @@ export default {
 				property_id: account.property_id,
 				created_by: user.id,
 				status: 'pending',
+				approved_by: null,
 				source: 'manual',
 			})
 			.select()
