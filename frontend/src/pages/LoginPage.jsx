@@ -7,6 +7,7 @@ const LoginPage = () => {
   const [email, setEmail] =useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [isSignUp, setIsSignUp] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const inputClassName =
@@ -28,6 +29,21 @@ const LoginPage = () => {
     }
 
     navigate("/dashboard");
+  }
+
+  let logInSignUpSubmitButtonLabel;
+  if (isSignUp){
+    if (isSubmitting) {
+      logInSignUpSubmitButtonLabel = "Creating account";
+    } else {
+      logInSignUpSubmitButtonLabel = "Create account";
+    }
+  } else {
+    if (isSubmitting) {
+      logInSignUpSubmitButtonLabel = "Logging in";
+    } else {
+      logInSignUpSubmitButtonLabel = "Log in";
+    }
   }
 
   return (
@@ -54,10 +70,10 @@ const LoginPage = () => {
         <div className="flex min-h-screen items-start justify-center bg-section px-4">
           <div className="w-full max-w-sm rounded-xl bg-white p-8 shadow-sm">
             <h1 className="mt-1 text-2xl font-bold font-serif text-gray-900">
-              Login to Billio
+              {isSignUp ? "Create Account" : "Log In"}
             </h1>
             <p className="mt-1 font-sans text-sm text-gray-600">
-              Welcome back! Enter your details below.
+              {isSignUp ? "Welcome to Billio! Enter your information below to create your new account." : "Welcome back! Enter your details below."}
             </p>
             <form onSubmit={handleSubmit} className="mt-6 font-sans space-y-4">
               <div>  
@@ -92,11 +108,18 @@ const LoginPage = () => {
               <button 
                 type="submit"
                 disabled={isSubmitting}
-                className="btn-primary font-sans w-full py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                className="cursor-pointer btn-primary font-sans w-full py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
               >
-                  {isSubmitting ? "Logging in" : "Log in"}
+                  {logInSignUpSubmitButtonLabel}
               </button>
             </form>
+            <button
+              type="button"
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="mt-2 cursor-pointer text-sm font-semibold text-primary hover:underline "
+            >
+              {isSignUp ? "Already have an account? Log in" : "Don't have an account? Sign up"}
+            </button>
           </div>
         </div>
       </main>
