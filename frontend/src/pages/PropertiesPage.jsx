@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
 import PropertyForm from "../components/PropertyForm";
@@ -14,6 +15,8 @@ function PropertiesPage() {
 		updateProperty,
 		deleteProperty,
 	} = useProperties();
+	
+	const navigate = useNavigate();
 
 	const [showForm, setShowForm] = useState(false);
 	const [editingProperty, setEditingProperty] = useState(null);
@@ -330,7 +333,15 @@ function PropertiesPage() {
 																className="border-t border-section"
 															>
 																<td className="whitespace-nowrap px-4 py-3 font-medium">
-																	{property.name}
+																	    <button
+    																	    type="button"
+    																	    onClick={() =>
+    																	        navigate(`/properties/${property.id}`)
+    																	    }
+    																	    className="text-primary hover:text-primary-hover hover:underline"
+    																	>
+    																	    {property.name}
+    																	</button>
 																</td>
 
 																<td className="px-4 py-3">
@@ -339,16 +350,16 @@ function PropertiesPage() {
 
 																<td className="px-4 py-3">
 																	<button
-																		type="button"
-																		onClick={() =>
-																			handleStatusChange(property)
-																		}
-																		className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-black"
-																		title="Click to change status"
+																	    type="button"
+																	    onClick={() => handleStatusChange(property)}
+																	    className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+																	        property.status === "active"
+																	            ? "bg-green-100 text-green-800 hover:bg-green-200"
+																	            : "bg-red-100 text-red-800 hover:bg-red-200"
+																	    }`}
+																	    title="Click to change status"
 																	>
-																		{property.status === "active"
-																			? "Active"
-																			: "Inactive"}
+																	    {property.status === "active" ? "Active" : "Inactive"}
 																	</button>
 																</td>
 
