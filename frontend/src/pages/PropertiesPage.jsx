@@ -1,20 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
+import PropertyForm from "../components/PropertyForm";
 import { useProperties } from "../hooks/useProperties";
-//comment so I can git add and push
-const initialFormData = {
-	name: "",
-	street: "",
-	city: "",
-	state: "",
-	zip: "",
-	type: "",
-	status: "inactive",
-};
-
-const inputClassName =
-	"w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 function PropertiesPage() {
 	const {
@@ -29,7 +17,6 @@ function PropertiesPage() {
 
 	const [showForm, setShowForm] = useState(false);
 	const [editingProperty, setEditingProperty] = useState(null);
-	const [formData, setFormData] = useState(initialFormData);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [formError, setFormError] = useState("");
 	const [successMessage, setSuccessMessage] = useState("");
@@ -73,37 +60,14 @@ function PropertiesPage() {
 		(property) => property.status === "active"
 	).length;
 
-	function handleChange(event) {
-		const { name, value } = event.target;
-
-		setFormData((current) => ({
-			...current,
-			[name]: value,
-		}));
-
-		setFormError("");
-	}
-
 	function openAddForm() {
 		setEditingProperty(null);
-		setFormData(initialFormData);
 		setFormError("");
 		setShowForm(true);
 	}
 
 	function openEditForm(property) {
 		setEditingProperty(property);
-
-		setFormData({
-			name: property.name || "",
-			street: property.street || "",
-			city: property.city || "",
-			state: property.state || "",
-			zip: property.zip ?? "",
-			type: property.type || "",
-			status: property.status || "inactive",
-		});
-
 		setFormError("");
 		setShowForm(true);
 	}
@@ -111,21 +75,13 @@ function PropertiesPage() {
 	function closeForm() {
 		setShowForm(false);
 		setEditingProperty(null);
-		setFormData(initialFormData);
 		setFormError("");
 	}
 
-	async function handleSubmit(event) {
-		event.preventDefault();
-
+	async function handleSubmit(propertyData) {
 		setIsSubmitting(true);
 		setFormError("");
 		setSuccessMessage("");
-
-		const propertyData = {
-			...formData,
-			zip: formData.zip === "" ? null : Number(formData.zip),
-		};
 
 		try {
 			if (editingProperty) {
@@ -328,7 +284,13 @@ function PropertiesPage() {
 										</div>
 
 										<div className="overflow-x-auto rounded-lg bg-white">
-											<table className="w-full min-w-[650px] text-left text-sm">
+											<table className="w-full min-w-[650px] table-fixed text-left text-sm">
+												<colgroup>
+													<col className="w-[23%]" />
+													<col className="w-[43%]" />
+													<col className="w-[16%]" />
+													<col className="w-[18%]" />
+												</colgroup>
 												<thead className="text-xs uppercase">
 													<tr>
 														<th className="px-4 py-3 font-semibold">
@@ -430,200 +392,16 @@ function PropertiesPage() {
 				<Footer />
 			</div>
 
-			{/* Add / Edit Property Modal */}
 			{showForm && (
-				<div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
-					<div className="my-auto w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl">
-
-						<div className="mb-6 flex items-center justify-between">
-							<h2 className="text-xl font-bold">
-								{editingProperty ? "Edit Property" : "Add Property"}
-							</h2>
-
-							<button
-								type="button"
-								onClick={closeForm}
-								className="text-2xl text-gray-500 hover:text-black"
-								aria-label="Close form"
-							>
-								&times;
-							</button>
-						</div>
-
-						<form onSubmit={handleSubmit} className="space-y-4">
-
-							<div>
-								<label
-									htmlFor="name"
-									className="mb-1 block text-sm font-medium"
-								>
-									Property Name
-								</label>
-								<input
-									id="name"
-									name="name"
-									type="text"
-									value={formData.name}
-									onChange={handleChange}
-									className={inputClassName}
-									placeholder="Oakwood Apartments"
-									maxLength={150}
-									required
-								/>
-							</div>
-
-							<div>
-								<label
-									htmlFor="type"
-									className="mb-1 block text-sm font-medium"
-								>
-									Property Type
-								</label>
-								<select
-									id="type"
-									name="type"
-									value={formData.type}
-									onChange={handleChange}
-									className={inputClassName}
-									required
-								>
-									<option value="" disabled>
-										Select property type
-									</option>
-									<option value="Residential">Residential</option>
-									<option value="Commercial">Commercial</option>
-									<option value="Multi-Family">Multi-Family</option>
-									<option value="Industrial">Industrial</option>
-								</select>
-							</div>
-
-							<div>
-								<label
-									htmlFor="street"
-									className="mb-1 block text-sm font-medium"
-								>
-									Street Address
-								</label>
-								<input
-									id="street"
-									name="street"
-									type="text"
-									value={formData.street}
-									onChange={handleChange}
-									className={inputClassName}
-									placeholder="124 Main St"
-								/>
-							</div>
-
-							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-								<div>
-									<label
-										htmlFor="city"
-										className="mb-1 block text-sm font-medium"
-									>
-										City
-									</label>
-									<input
-										id="city"
-										name="city"
-										type="text"
-										value={formData.city}
-										onChange={handleChange}
-										className={inputClassName}
-										placeholder="Miami"
-									/>
-								</div>
-
-								<div>
-									<label
-										htmlFor="state"
-										className="mb-1 block text-sm font-medium"
-									>
-										State
-									</label>
-									<input
-										id="state"
-										name="state"
-										type="text"
-										value={formData.state}
-										onChange={handleChange}
-										className={inputClassName}
-										placeholder="FL"
-									/>
-								</div>
-
-								<div>
-									<label
-										htmlFor="zip"
-										className="mb-1 block text-sm font-medium"
-									>
-										ZIP Code
-									</label>
-									<input
-										id="zip"
-										name="zip"
-										type="number"
-										value={formData.zip}
-										onChange={handleChange}
-										className={inputClassName}
-										placeholder="33101"
-										min="0"
-										max="99999"
-									/>
-								</div>
-
-								<div>
-									<label
-										htmlFor="status"
-										className="mb-1 block text-sm font-medium"
-									>
-										Status
-									</label>
-									<select
-										id="status"
-										name="status"
-										value={formData.status}
-										onChange={handleChange}
-										className={inputClassName}
-									>
-										<option value="active">Active</option>
-										<option value="inactive">Inactive</option>
-									</select>
-								</div>
-							</div>
-
-							{formError && (
-								<p role="alert" className="text-sm text-red-700">
-									{formError}
-								</p>
-							)}
-
-							<div className="flex justify-end gap-3 border-t border-section pt-5">
-								<button
-									type="button"
-									onClick={closeForm}
-									disabled={isSubmitting}
-									className="btn-secondary px-4 py-2 text-sm"
-								>
-									Cancel
-								</button>
-
-								<button
-									type="submit"
-									disabled={isSubmitting}
-									className="btn-primary px-5 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-								>
-									{isSubmitting
-										? "Saving..."
-										: editingProperty
-											? "Save Changes"
-											: "Create Property"}
-								</button>
-							</div>
-
-						</form>
-					</div>
-				</div>
+				<PropertyForm
+					key={editingProperty?.id ?? "new-property"}
+					initialValues={editingProperty ?? undefined}
+					isEditing={Boolean(editingProperty)}
+					isSubmitting={isSubmitting}
+					error={formError}
+					onCancel={closeForm}
+					onSubmit={handleSubmit}
+				/>
 			)}
 		</div>
 	);

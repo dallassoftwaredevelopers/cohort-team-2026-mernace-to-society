@@ -1,5 +1,8 @@
+import { useState } from "react";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
+import VendorForm from "../components/VendorForm";
+import { supabase } from "../../utils/supabase";
 
 const cards = [
   { title: "Total Vendors", value: "0", note: "Across 0 service types" },
@@ -29,6 +32,57 @@ const columns = [
 const hideOnMobile = (col) => (col.mobile ? "" : "hidden md:table-cell");
 
 function VendorsPage() {
+  const [showVendorForm, setShowVendorForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  function closeVendorForm() {
+    setShowVendorForm(false);
+    setFormError("");
+  }
+
+  async function handleCreateVendor(vendorData) {
+    setIsSubmitting(true);
+    setFormError("");
+    setSuccessMessage("");
+
+    try {
+      const { data, error } = await supabase.functions.invoke("create-vendor", {
+        body: vendorData,
+      });
+
+      if (error) {
+        let serverMessage = "";
+        if (typeof error.context?.json === "function") {
+          try {
+            const responseBody = await error.context.json();
+            serverMessage = responseBody?.error || "";
+          } catch {
+            serverMessage = "";
+          }
+        }
+        throw new Error(serverMessage || error.message || "Could not create vendor.");
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+      if (!data?.data) {
+        throw new Error("The server did not return the created vendor.");
+      }
+
+      setSuccessMessage("Vendor created successfully.");
+      closeVendorForm();
+    } catch (error) {
+      setFormError(
+        error instanceof Error ? error.message : "Could not create vendor.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <div className="flex min-h-screen bg-white text-black">
       <Sidebar />
@@ -36,10 +90,23 @@ function VendorsPage() {
       <main className="min-w-0 flex-1 p-4 md:p-8">
         <section className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="font-serif text-2xl font-bold">Vendors</h1>
-          <button className="btn-primary px-5 py-3 text-sm">
+          <button
+            type="button"
+            onClick={() => {
+              setFormError("");
+              setShowVendorForm(true);
+            }}
+            className="btn-primary cursor-pointer px-5 py-3 text-sm"
+          >
             + Add Vendor
           </button>
         </section>
+
+        {successMessage && (
+          <p role="status" className="mt-4 text-sm text-green-700">
+            {successMessage}
+          </p>
+        )}
 
         {/* Search */}
         <div className="mt-6">
@@ -128,6 +195,14 @@ function VendorsPage() {
       </main>
       <Footer />
       </div>
+      {showVendorForm && (
+        <VendorForm
+          isSubmitting={isSubmitting}
+          error={formError}
+          onCancel={closeVendorForm}
+          onSubmit={handleCreateVendor}
+        />
+      )}
     </div>
   );
 }
