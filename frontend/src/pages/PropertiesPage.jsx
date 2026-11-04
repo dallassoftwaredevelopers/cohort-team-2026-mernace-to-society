@@ -1,134 +1,419 @@
-// Placeholder hardcorded property records.
-// Grouping logic used to display records in category tables.
-
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
-
-const properties = [
-	{ id: 1, type: "Residential", name: "Oakwood Apartments", address: "124 Main St", size: "24 Units", status: "Active" },
-	{ id: 2, type: "Residential", name: "Pineview Residences", address: "55 Pineview Dr", size: "16 Units", status: "Active" },
-	{ id: 3, type: "Residential", name: "Sunny Apartments", address: "123 Main St", size: "12 Units", status: "Active" },
-	{ id: 4, type: "Residential", name: "Cedar Grove Homes", address: "840 Cedar Ln", size: "8 Units", status: "Active" },
-	{ id: 5, type: "Commercial", name: "Market Square Plaza", address: "300 Market St", size: "12,000 sq ft", status: "Active" },
-	{ id: 6, type: "Commercial", name: "Riverside Offices", address: "18 River Rd", size: "6,400 sq ft", status: "Active" },
-	{ id: 7, type: "Commercial", name: "Pioneer Shops", address: "720 Pioneer Ave", size: "4,000 sq ft", status: "Active" },
-	{ id: 8, type: "Multi-Family", name: "Harbor View Lofts", address: "22 Harbor Way", size: "32 Units", status: "Active" },
-	{ id: 9, type: "Multi-Family", name: "Riverwalk Commons", address: "99 Riverwalk Blvd", size: "36 Units", status: "Active" },
-	{ id: 10, type: "Multi-Family", name: "Maple Court", address: "410 Maple St", size: "24 Units", status: "Active" },
-	{ id: 11, type: "Industrial", name: "Warehouse District 2", address: "210 Depot St", size: "38,000 sq ft", status: "Active" },
-	{ id: 12, type: "Industrial", name: "Westside Distribution", address: "600 Westside Pkwy", size: "24,000 sq ft", status: "Active" },
-];
-
-const groupedProperties = [
-	{
-		type: "Residential",
-		properties: properties.filter((property) => property.type === "Residential"),
-	},
-	{
-		type: "Commercial",
-		properties: properties.filter((property) => property.type === "Commercial"),
-	},
-	{
-		type: "Multi-Family",
-		properties: properties.filter((property) => property.type === "Multi-Family"),
-	},
-	{
-		type: "Industrial",
-		properties: properties.filter((property) => property.type === "Industrial"),
-	},
-];
+import PropertyForm from "../components/PropertyForm";
+import { useProperties } from "../hooks/useProperties";
 
 function PropertiesPage() {
+	const {
+		properties,
+		loading,
+		error,
+		fetchProperties,
+		createProperty,
+		updateProperty,
+		deleteProperty,
+	} = useProperties();
+	
+	const navigate = useNavigate();
+
+	const [showForm, setShowForm] = useState(false);
+	const [editingProperty, setEditingProperty] = useState(null);
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [formError, setFormError] = useState("");
+	const [successMessage, setSuccessMessage] = useState("");
+
+	// Retrieve properties when the page loads.
+	useEffect(() => {
+		fetchProperties().catch(() => {});
+	}, [fetchProperties]);
+
+	// Group properties dynamically by type.
+	const groupedProperties = useMemo(() => {
+		const groups = properties.reduce((groups, property) => {
+			const type = property.type || "Uncategorized";
+
+			if (!groups[type]) {
+				groups[type] = [];
+			}
+
+			groups[type].push(property);
+
+			return groups;
+		}, {});
+
+		return Object.entries(groups).sort(([a], [b]) =>
+			a.localeCompare(b)
+		);
+	}, [properties]);
+
+	// Dashboard statistics.
+	const totalProperties = properties.length;
+
+	const residentialCount = properties.filter(
+		(property) => property.type === "Residential"
+	).length;
+
+	const commercialCount = properties.filter(
+		(property) => property.type === "Commercial"
+	).length;
+
+	const activeCount = properties.filter(
+		(property) => property.status === "active"
+	).length;
+
+	function openAddForm() {
+		setEditingProperty(null);
+		setFormError("");
+		setShowForm(true);
+	}
+
+	function openEditForm(property) {
+		setEditingProperty(property);
+		setFormError("");
+		setShowForm(true);
+	}
+
+	function closeForm() {
+		setShowForm(false);
+		setEditingProperty(null);
+		setFormError("");
+	}
+
+	async function handleSubmit(propertyData) {
+		setIsSubmitting(true);
+		setFormError("");
+		setSuccessMessage("");
+
+		try {
+			if (editingProperty) {
+				await updateProperty(editingProperty.id, propertyData);
+				setSuccessMessage("Property updated successfully.");
+			} else {
+				await createProperty(propertyData);
+				setSuccessMessage("Property created successfully.");
+			}
+
+			closeForm();
+		} catch (err) {
+			setFormError(
+				err instanceof Error
+					? err.message
+					: "Something went wrong. Please try again."
+			);
+		} finally {
+			setIsSubmitting(false);
+		}
+	}
+
+	async function handleStatusChange(property) {
+		const newStatus =
+			property.status === "active" ? "inactive" : "active";
+
+		setSuccessMessage("");
+
+		try {
+			await updateProperty(property.id, {
+				status: newStatus,
+			});
+
+			setSuccessMessage(
+				`Property marked as ${newStatus}.`
+			);
+		} catch {
+			// The hook manages the error message.
+		}
+	}
+
+	async function handleDelete(property) {
+		const confirmed = window.confirm(
+			`Are you sure you want to delete ${property.name}?`
+		);
+
+		if (!confirmed) return;
+
+		setSuccessMessage("");
+
+		try {
+			await deleteProperty(property.id);
+			setSuccessMessage("Property deleted successfully.");
+		} catch {
+			// The hook manages the error message.
+		}
+	}
+
 	return (
-		<div className="flex min-h-screen bg-gray-50">
+		<div className="flex min-h-screen bg-white text-black">
 			<Sidebar />
+
 			<div className="flex min-w-0 flex-1 flex-col">
+				<main className="min-w-0 flex-1 p-4 md:p-8">
 
-			<main className="min-w-0 flex-1 p-4 sm:p-8">
-				<section className="flex flex-wrap items-center justify-between gap-4">
-					<h2 className="text-2xl font-bold text-[#192D4A]">Properties</h2>
-					<button
-						type="button"
-						className="rounded-lg bg-[#192D4A] px-5 py-3 font-medium text-white"
-					>
-						+ Add Property
-					</button>
-				</section>
+					{/* Page Header */}
+					<section className="flex flex-wrap items-center justify-between gap-4">
+						<h1 className="font-serif text-2xl font-bold">
+							Properties
+						</h1>
 
-				<section className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-					<div className="rounded-2xl border border-gray-200 bg-white p-6">
-						<h3 className=" text-gray-600">Total Properties</h3>
-						<p className="py-3 text-3xl text-[#192D4A]">12</p>
-						<p className=" text-gray-600">Across 4 property types</p>
-					</div>
-					<div className="rounded-2xl border border-gray-200 bg-white p-6">
-						<h3 className="text-gray-600">Residential</h3>
-						<p className="py-3 text-3xl text-[#192D4A]">
-							4
-						</p>
-						<p className=" text-gray-600">60 units total</p>
-					</div>
-					<div className="rounded-2xl border border-gray-200 bg-white p-6">
-						<h3 className=" text-gray-600">Commercial</h3>
-						<p className="py-3 text-3xl text-[#192D4A]">
-							3
-						</p>
-						<p className=" text-gray-600">22,400 sq ft</p>
-					</div>
-					<div className="rounded-2xl border border-gray-200 bg-white p-6">
-						<h3 className=" text-gray-600">Active Properties</h3>
-						<p className="py-3 text-3xl text-[#192D4A]">12</p>
-						<p className=" text-gray-600">All properties active</p>
-					</div>
-				</section>
+						<button
+							type="button"
+							onClick={openAddForm}
+							className="btn-primary px-5 py-3 text-sm"
+						>
+							+ Add Property
+						</button>
+					</section>
 
-				<section className="mt-8">
-					<div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-						<h3 className="text-xl font-semibold text-[#192D4A]">Properties by type</h3>
-						<p className=" text-gray-500">12 total properties</p>
-					</div>
+					{/* Dashboard Statistics */}
+					<section className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
 
-					<div className="space-y-4 rounded-2xl border border-gray-200 bg-white p-4 sm:p-5">
-						{groupedProperties.map(({ type, properties: typeProperties }) => (
-							<section key={type} className="border-b border-gray-200 pb-4 last:border-b-0 last:pb-0">
-								<div className="mb-2 flex items-center justify-between gap-2">
-									<h4 className="font-semibold text-[#192D4A]">{type}</h4>
-									<p className=" text-gray-500">{typeProperties.length} properties</p>
+						<div className="card">
+							<h3 className="text-sm font-semibold">
+								Total Properties
+							</h3>
+							<p className="mt-3 text-3xl font-bold">
+								{totalProperties}
+							</p>
+							<p className="mt-1 text-xs">
+								Across {groupedProperties.length} property types
+							</p>
+						</div>
+
+						<div className="card">
+							<h3 className="text-sm font-semibold">
+								Residential
+							</h3>
+							<p className="mt-3 text-3xl font-bold">
+								{residentialCount}
+							</p>
+							<p className="mt-1 text-xs">
+								Residential properties
+							</p>
+						</div>
+
+						<div className="card">
+							<h3 className="text-sm font-semibold">
+								Commercial
+							</h3>
+							<p className="mt-3 text-3xl font-bold">
+								{commercialCount}
+							</p>
+							<p className="mt-1 text-xs">
+								Commercial properties
+							</p>
+						</div>
+
+						<div className="card">
+							<h3 className="text-sm font-semibold">
+								Active Properties
+							</h3>
+							<p className="mt-3 text-3xl font-bold">
+								{activeCount}
+							</p>
+							<p className="mt-1 text-xs">
+								{totalProperties - activeCount} inactive properties
+							</p>
+						</div>
+
+					</section>
+
+					{/* Messages */}
+					{error && (
+						<div
+							role="alert"
+							className="mt-6 rounded-lg bg-red-50 p-4 text-sm text-red-700"
+						>
+							{error}
+						</div>
+					)}
+
+					{successMessage && (
+						<div
+							role="status"
+							className="mt-6 rounded-lg bg-green-50 p-4 text-sm text-green-700"
+						>
+							{successMessage}
+						</div>
+					)}
+
+					{/* Properties by Type */}
+					<section className="card mt-8">
+						<div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-black pb-4">
+							<h2 className="text-lg font-bold">
+								Properties by Type
+							</h2>
+
+							<p className="text-sm">
+								{totalProperties} total properties
+							</p>
+						</div>
+
+						<div className="space-y-4">
+
+							{loading ? (
+								<p className="py-8 text-center text-sm">
+									Loading properties...
+								</p>
+							) : properties.length === 0 ? (
+								<div className="py-10 text-center">
+									<h3 className="font-semibold">
+										No properties yet
+									</h3>
+									<p className="mt-2 text-sm">
+										Add your first property to get started.
+									</p>
+									<button
+										type="button"
+										onClick={openAddForm}
+										className="btn-primary mt-4 px-5 py-2 text-sm"
+									>
+										Add Property
+									</button>
 								</div>
+							) : (
+								groupedProperties.map(([type, typeProperties]) => (
+									<section
+										key={type}
+										className="border-b border-section pb-4 last:border-b-0 last:pb-0"
+									>
+										<div className="mb-2 flex items-center justify-between gap-2">
+											<h3 className="font-semibold">
+												{type}
+											</h3>
+											<p className="text-xs">
+												{typeProperties.length} properties
+											</p>
+										</div>
 
-								<div className="overflow-x-auto rounded-xl border border-gray-200">
-									<table className="w-full min-w-[600px] text-left text-sm">
-										<thead className="bg-gray-100 text-[#192D4A]">
-											<tr>
-												<th className="px-4 py-2 font-semibold">Property Name</th>
-												<th className="px-4 py-2 font-semibold">Address</th>
-												<th className="px-4 py-2 font-semibold">Units / Size</th>
-												<th className="px-4 py-2 font-semibold">Status</th>
-											</tr>
-										</thead>
-										<tbody className="divide-y divide-gray-100 text-gray-600">
-											{typeProperties.map((property) => (
-												<tr key={property.id}>
-													<td className="whitespace-nowrap px-4 py-2 text-[#192D4A]">{property.name}</td>
-													<td className="whitespace-nowrap px-4 py-2">{property.address}</td>
-													<td className="whitespace-nowrap px-4 py-2">{property.size}</td>
-													<td className="px-4 py-2">
-														<span className="inline-block rounded-full bg-green-50 px-3 py-1 text-green-700">
-															active
-														</span>
-													</td>
-												</tr>
-											))}
-										</tbody>
-									</table>
-								</div>
-							</section>
-						))}
-					</div>
-				</section>
-			</main>
-			<Footer />
+										<div className="overflow-x-auto rounded-lg bg-white">
+											<table className="w-full min-w-[650px] table-fixed text-left text-sm">
+												<colgroup>
+													<col className="w-[23%]" />
+													<col className="w-[43%]" />
+													<col className="w-[16%]" />
+													<col className="w-[18%]" />
+												</colgroup>
+												<thead className="text-xs uppercase">
+													<tr>
+														<th className="px-4 py-3 font-semibold">
+															Property Name
+														</th>
+														<th className="px-4 py-3 font-semibold">
+															Address
+														</th>
+														<th className="px-4 py-3 font-semibold">
+															Status
+														</th>
+														<th className="px-4 py-3 font-semibold">
+															Actions
+														</th>
+													</tr>
+												</thead>
+
+												<tbody>
+													{typeProperties.map((property) => {
+														const address = [
+															property.street,
+															property.city,
+															property.state,
+															property.zip,
+														]
+															.filter(
+																(value) =>
+																	value !== null &&
+																	value !== undefined &&
+																	value !== ""
+															)
+															.join(", ");
+
+														return (
+															<tr
+																key={property.id}
+																className="border-t border-section"
+															>
+																<td className="whitespace-nowrap px-4 py-3 font-medium">
+																	    <button
+    																	    type="button"
+    																	    onClick={() =>
+    																	        navigate(`/properties/${property.id}`)
+    																	    }
+    																	    className="text-primary hover:text-primary-hover hover:underline"
+    																	>
+    																	    {property.name}
+    																	</button>
+																</td>
+
+																<td className="px-4 py-3">
+																	{address || "—"}
+																</td>
+
+																<td className="px-4 py-3">
+																	<button
+																	    type="button"
+																	    onClick={() => handleStatusChange(property)}
+																	    className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+																	        property.status === "active"
+																	            ? "bg-green-100 text-green-800 hover:bg-green-200"
+																	            : "bg-red-100 text-red-800 hover:bg-red-200"
+																	    }`}
+																	    title="Click to change status"
+																	>
+																	    {property.status === "active" ? "Active" : "Inactive"}
+																	</button>
+																</td>
+
+																<td className="whitespace-nowrap px-4 py-3">
+																	<div className="flex gap-3">
+																		<button
+																			type="button"
+																			onClick={() =>
+																				openEditForm(property)
+																			}
+																			className="font-medium text-primary hover:text-primary-hover"
+																		>
+																			Edit
+																		</button>
+
+																		<button
+																			type="button"
+																			onClick={() =>
+																				handleDelete(property)
+																			}
+																			className="font-medium text-red-700 hover:text-red-900"
+																		>
+																			Delete
+																		</button>
+																	</div>
+																</td>
+															</tr>
+														);
+													})}
+												</tbody>
+											</table>
+										</div>
+									</section>
+								))
+							)}
+
+						</div>
+					</section>
+				</main>
+
+				<Footer />
 			</div>
+
+			{showForm && (
+				<PropertyForm
+					key={editingProperty?.id ?? "new-property"}
+					initialValues={editingProperty ?? undefined}
+					isEditing={Boolean(editingProperty)}
+					isSubmitting={isSubmitting}
+					error={formError}
+					onCancel={closeForm}
+					onSubmit={handleSubmit}
+				/>
+			)}
 		</div>
 	);
 }

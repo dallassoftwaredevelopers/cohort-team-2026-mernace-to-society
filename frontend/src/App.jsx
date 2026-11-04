@@ -6,13 +6,14 @@ import DashboardPage from "./pages/DashboardPage";
 import BillsPage from "./pages/BillsPage";
 import UploadBillPage from "./pages/UploadBillPage";
 import PropertiesPage from "./pages/PropertiesPage";
+import PropertyDetailsPage from "./pages/PropertyDetailsPage";
 import ManualBillIntakePage from "./pages/ManualBillIntakePage";
 import VendorsPage from "./pages/VendorsPage";
 import ApprovalsPage from "./pages/ApprovalsPage";
 import TermsOfServicePage from "./pages/TermsOfServicePage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import FunctionTestPage from "./pages/FunctionTestPage";
-import VendorFormPage from "./pages/VendorFormPage";
+import AccountSettingsPage from "./pages/AccountSettingsPage";
 
 function App() {
   return (
@@ -24,13 +25,14 @@ function App() {
         <Route path="/bills" element={<BillsPage />} />
         <Route path="/bills/upload" element={<UploadBillPage />} />
         <Route path="/bills/manual" element={<ManualBillIntakePage />} />
+        {/* <Route path="/billintake" element={<BillIntakePage />} /> */}
         <Route path="/properties" element={<PropertiesPage />} />
+        <Route path="/properties/:propertyId" element={<PropertyDetailsPage />}/>
         <Route path="/vendors" element={<VendorsPage />} />
         <Route path="/approvals" element={<ApprovalsPage />} />
         <Route path="/terms-of-service" element={<TermsOfServicePage />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-        <Route path="/vendors-form" element={<VendorFormPage />} />
-
+        <Route path="/settings" element={<AccountSettingsPage />} />
         {/* Dev-only page for calling edge functions directly */}
         <Route path="/dev/functions" element={<FunctionTestPage />} />
       </Routes>
