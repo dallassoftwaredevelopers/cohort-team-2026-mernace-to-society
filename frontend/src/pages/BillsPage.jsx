@@ -1,5 +1,6 @@
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
+import BillDetailsForm from '../components/BillDetailsForm';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../utils/supabase';
@@ -12,6 +13,7 @@ const billColumns = [
 	'Due date',
 	'Amount',
 	'Status',
+	'Actions',
 ];
 
 const cellMessageClassName = 'px-4 py-12 text-center text-gray-600';
@@ -21,27 +23,40 @@ function BillsPage() {
 	const [bills, setBills] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [errorMessage, setErrorMessage] = useState('');
+	// The bill whose Edit button was clicked; null keeps the modal closed
+	const [editingBill, setEditingBill] = useState(null);
+
+	// Bumping this re-runs the fetch below (e.g. after a bill is edited)
+	const [reloadCount, setReloadCount] = useState(0);
 	const navigate = useNavigate();
 
 	useEffect(() => {
 		async function loadBills() {
-			// The client sends the logged-in user's token, so RLS decides which rows come back
+			// The client sends the logged-in user's token, so RLS decides which rows come back.
+			// property_id and vendor_account_id are needed to pre-fill the edit form.
 			const { data, error } = await supabase
 				.from('bill')
 				.select(
-					'id, invoice_number, issue_date, due_date, amount, status, extracted_vendor_name, property(name), vendor_account(service, vendor(name))',
+					'id, invoice_number, issue_date, due_date, amount, status, extracted_vendor_name, property_id, vendor_account_id, property(name), vendor_account(service, vendor(name))',
 				)
 				.order('due_date', { ascending: true });
 
 			if (error) {
 				setErrorMessage('Could not load bills. Please try again.');
 			} else {
+				setErrorMessage('');
 				setBills(data);
 			}
 			setLoading(false);
 		}
 		loadBills();
-	}, []);
+	}, [reloadCount]);
+
+	function handleBillSaved() {
+		setEditingBill(null);
+		// Re-fetch so the joined property/vendor names reflect the edit
+		setReloadCount((count) => count + 1);
+	}
 
 	return (
 		<div className="flex min-h-screen bg-white text-black">
@@ -159,6 +174,18 @@ function BillsPage() {
 														})}
 											</td>
 											<td className="px-4 py-3 capitalize">{bill.status}</td>
+											<td className="px-4 py-3">
+												{/* Only pending bills can be edited; approved/rejected bills are locked */}
+												{bill.status === 'pending' && (
+													<button
+														type="button"
+														onClick={() => setEditingBill(bill)}
+														className="font-medium text-[#2460D5] hover:text-[#194DB4]"
+													>
+														Edit
+													</button>
+												)}
+											</td>
 										</tr>
 									))
 								)}
@@ -168,6 +195,31 @@ function BillsPage() {
 				</main>
 				<Footer />
 			</div>
+
+			{editingBill && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
+					<div className="my-auto w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl">
+						<div className="flex items-center justify-between">
+							<h2 className="text-xl font-bold">Edit Bill</h2>
+							<button
+								type="button"
+								onClick={() => setEditingBill(null)}
+								className="text-2xl text-gray-500 hover:text-black"
+								aria-label="Close form"
+							>
+								&times;
+							</button>
+						</div>
+						{/* key resets the form if a different bill is opened */}
+						<BillDetailsForm
+							key={editingBill.id}
+							bill={editingBill}
+							onSaved={handleBillSaved}
+							onCancel={() => setEditingBill(null)}
+						/>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }
