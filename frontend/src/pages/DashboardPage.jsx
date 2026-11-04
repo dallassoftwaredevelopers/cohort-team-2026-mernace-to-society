@@ -1,5 +1,9 @@
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
+import PropertyForm from "../components/PropertyForm";
+import VendorForm from "../components/VendorForm";
+import { useProperties } from "../hooks/useProperties";
+import { supabase } from "../../utils/supabase";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -22,7 +26,66 @@ const columns = [
 
 function DashboardPage() {
   const [open, setOpen] = useState(false);
+  const [activeForm, setActiveForm] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const { createProperty } = useProperties();
   const navigate = useNavigate();
+
+  function closeForm() {
+    setActiveForm("");
+    setFormError("");
+  }
+
+  async function handleCreateProperty(propertyData) {
+    setIsSubmitting(true);
+    setFormError("");
+    setSuccessMessage("");
+
+    try {
+      await createProperty(propertyData);
+      setSuccessMessage("Property created successfully.");
+      closeForm();
+    } catch (error) {
+      setFormError(
+        error instanceof Error ? error.message : "Could not create property.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleCreateVendor(vendorData) {
+    setIsSubmitting(true);
+    setFormError("");
+    setSuccessMessage("");
+
+    try {
+      const { data, error } = await supabase.functions.invoke("create-vendor", {
+        body: vendorData,
+      });
+
+      if (error) {
+        throw new Error(error.message || "Could not create vendor.");
+      }
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+      if (!data?.data) {
+        throw new Error("The server did not return the created vendor.");
+      }
+
+      setSuccessMessage("Vendor created successfully.");
+      closeForm();
+    } catch (error) {
+      setFormError(
+        error instanceof Error ? error.message : "Could not create vendor.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <div className="flex min-h-screen bg-white text-black">
@@ -68,14 +131,34 @@ function DashboardPage() {
                 </div>
               )}
             </div>
-            <button className="btn-secondary px-5 py-3 text-sm">
+            <button
+              type="button"
+              onClick={() => {
+                setFormError("");
+                setActiveForm("property");
+              }}
+              className="btn-secondary px-5 py-3 text-sm"
+            >
               Add Property
             </button>
-            <button className="btn-secondary px-5 py-3 text-sm">
+            <button
+              type="button"
+              onClick={() => {
+                setFormError("");
+                setActiveForm("vendor");
+              }}
+              className="btn-secondary px-5 py-3 text-sm"
+            >
               Add Vendor
             </button>
           </div>
         </section>
+
+        {successMessage && (
+          <p role="status" className="mt-4 text-sm text-green-700">
+            {successMessage}
+          </p>
+        )}
 
         {/* Summary cards */}
         <section className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -140,6 +223,24 @@ function DashboardPage() {
       </main>
       <Footer />
       </div>
+      {activeForm === "property" && (
+        <PropertyForm
+          key="dashboard-property"
+          isSubmitting={isSubmitting}
+          error={formError}
+          onCancel={closeForm}
+          onSubmit={handleCreateProperty}
+        />
+      )}
+      {activeForm === "vendor" && (
+        <VendorForm
+          key="dashboard-vendor"
+          isSubmitting={isSubmitting}
+          error={formError}
+          onCancel={closeForm}
+          onSubmit={handleCreateVendor}
+        />
+      )}
     </div>
   );
 }
