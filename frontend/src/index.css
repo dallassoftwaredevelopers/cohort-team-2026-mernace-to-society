@@ -10,6 +10,8 @@
   --color-secondary-hover: #c8c8c8;
   --color-section: #f8f8f8;
   --color-sidebar: #182b49;
+  --color-sidebar-hover: #2b405d;
+  --color-sidebar-avatar: #8a9bb6;
 }
 
 @layer base {
@@ -38,6 +40,6 @@
     @apply rounded-lg bg-secondary font-semibold text-black hover:bg-secondary-hover;
   }
   .card {
-    @apply rounded-xl bg-section p-6;
+    @apply rounded-xl bg-section p-4 md:p-6;
   }
 }

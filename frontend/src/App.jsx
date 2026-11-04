@@ -13,26 +13,31 @@ import TermsOfServicePage from "./pages/TermsOfServicePage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import FunctionTestPage from "./pages/FunctionTestPage";
 import AccountSettingsPage from "./pages/AccountSettingsPage";
+import AppLayout from "./components/AppLayout";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public pages: no sidebar */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/bills" element={<BillsPage />} />
-        <Route path="/bills/upload" element={<UploadBillPage />} />
-        <Route path="/bills/manual" element={<ManualBillIntakePage />} />
-        {/* <Route path="/billintake" element={<BillIntakePage />} /> */}
-        <Route path="/properties" element={<PropertiesPage />} />
-        <Route path="/vendors" element={<VendorsPage />} />
-        <Route path="/approvals" element={<ApprovalsPage />} />
         <Route path="/terms-of-service" element={<TermsOfServicePage />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-        <Route path="/settings" element={<AccountSettingsPage />} />
-        {/* Dev-only page for calling edge functions directly */}
-        <Route path="/dev/functions" element={<FunctionTestPage />} />
+        {/* Logged-in pages share the sidebar + footer layout */}
+        <Route element={<AppLayout />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/bills" element={<BillsPage />} />
+          <Route path="/bills/upload" element={<UploadBillPage />} />
+          <Route path="/bills/manual" element={<ManualBillIntakePage />} />
+          {/* <Route path="/billintake" element={<BillIntakePage />} /> */}
+          <Route path="/properties" element={<PropertiesPage />} />
+          <Route path="/vendors" element={<VendorsPage />} />
+          <Route path="/approvals" element={<ApprovalsPage />} />
+          <Route path="/settings" element={<AccountSettingsPage />} />
+          {/* Dev-only page for calling edge functions directly */}
+          <Route path="/dev/functions" element={<FunctionTestPage />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );
