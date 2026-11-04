@@ -6,6 +6,7 @@ import DashboardPage from "./pages/DashboardPage";
 import BillsPage from "./pages/BillsPage";
 import UploadBillPage from "./pages/UploadBillPage";
 import PropertiesPage from "./pages/PropertiesPage";
+import PropertyDetailsPage from "./pages/PropertyDetailsPage";
 import ManualBillIntakePage from "./pages/ManualBillIntakePage";
 import VendorsPage from "./pages/VendorsPage";
 import ApprovalsPage from "./pages/ApprovalsPage";
@@ -32,6 +33,7 @@ function App() {
           <Route path="/bills/manual" element={<ManualBillIntakePage />} />
           {/* <Route path="/billintake" element={<BillIntakePage />} /> */}
           <Route path="/properties" element={<PropertiesPage />} />
+          <Route path="/properties/:propertyId" element={<PropertyDetailsPage />}/>
           <Route path="/vendors" element={<VendorsPage />} />
           <Route path="/approvals" element={<ApprovalsPage />} />
           <Route path="/settings" element={<AccountSettingsPage />} />

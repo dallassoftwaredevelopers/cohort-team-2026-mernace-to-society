@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import PropertyForm from "../components/PropertyForm";
 import { useProperties } from "../hooks/useProperties";
 
@@ -12,6 +13,8 @@ function PropertiesPage() {
     updateProperty,
     deleteProperty,
   } = useProperties();
+
+  const navigate = useNavigate();
 
   const [showForm, setShowForm] = useState(false);
   const [editingProperty, setEditingProperty] = useState(null);
@@ -269,7 +272,15 @@ function PropertiesPage() {
                           className="mb-3 block rounded-lg bg-white p-4 md:mb-0 md:table-row md:rounded-none md:border-t md:border-section md:p-0"
                         >
                           <td className="block py-1 font-semibold md:table-cell md:px-4 md:py-3 md:font-medium">
-                            {property.name}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                navigate(`/properties/${property.id}`)
+                              }
+                              className="text-left text-primary hover:text-primary-hover hover:underline"
+                            >
+                              {property.name}
+                            </button>
                           </td>
 
                           <td className="block py-1 text-gray-700 md:table-cell md:px-4 md:py-3 md:text-black">
@@ -280,7 +291,11 @@ function PropertiesPage() {
                             <button
                               type="button"
                               onClick={() => handleStatusChange(property)}
-                              className="rounded-full bg-secondary px-3 py-2 text-xs font-semibold text-black md:py-1"
+                              className={`rounded-full px-3 py-2 text-xs font-semibold transition-colors md:py-1 ${
+                                property.status === "active"
+                                  ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                  : "bg-red-100 text-red-800 hover:bg-red-200"
+                              }`}
                               title="Click to change status"
                             >
                               {property.status === "active"
