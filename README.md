@@ -1,4 +1,4 @@
-# Team MERNace to Society - DSDG Cohort October 2026
+# Team MERNace to Society - DSD Cohort October 2026
 
 ### Team Members:
 
@@ -23,3 +23,8 @@
 5. Verify: `GET http://localhost:3000/api/v1/health` returns `{ status: "ok" }`
 
 ### Frontend
+
+1. `cd backend/`
+2. `npm install`
+3. `npm run dev`
+4. open in browser Local: http://localhost:[specified port number]/ 

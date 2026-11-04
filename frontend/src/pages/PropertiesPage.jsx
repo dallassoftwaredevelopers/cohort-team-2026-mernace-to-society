@@ -2,6 +2,7 @@
 // Grouping logic used to display records in category tables.
 
 import Sidebar from "../components/Sidebar";
+import Footer from "../components/Footer";
 
 const properties = [
 	{ id: 1, type: "Residential", name: "Oakwood Apartments", address: "124 Main St", size: "24 Units", status: "Active" },
@@ -41,6 +42,7 @@ function PropertiesPage() {
 	return (
 		<div className="flex min-h-screen bg-gray-50">
 			<Sidebar />
+			<div className="flex min-w-0 flex-1 flex-col">
 
 			<main className="min-w-0 flex-1 p-4 sm:p-8">
 				<section className="flex flex-wrap items-center justify-between gap-4">
@@ -125,6 +127,8 @@ function PropertiesPage() {
 					</div>
 				</section>
 			</main>
+			<Footer />
+			</div>
 		</div>
 	);
 }
