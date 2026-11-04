@@ -39,6 +39,11 @@ function VendorsPage() {
   const [formError, setFormError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
+  // Vendors with no vendor_account rows must not be silently omitted.
+  const unassignedVendors = vendors.filter(
+    (vendor) => !(vendor.vendor_account || []).length,
+  );
+
   // Retrieve vendors when the page loads.
   useEffect(() => {
     fetchVendors().catch(() => {});
@@ -255,6 +260,69 @@ function VendorsPage() {
             </div>
                       );
             })}
+
+            {unassignedVendors.length > 0 && (
+              <div className="mt-6">
+                <div className="flex items-baseline justify-between">
+                  <h3 className="font-semibold">Unassigned</h3>
+                  <span className="text-xs">{unassignedVendors.length} vendors</span>
+                </div>
+
+                <table className="mt-2 w-full rounded-lg bg-white text-left text-sm">
+                  <thead>
+                    <tr className="text-xs uppercase">
+                      {columns.map((col) => (
+                        <th
+                          key={col.key}
+                          className={`px-4 py-3 font-semibold ${hideOnMobile(col)}`}
+                        >
+                          {col.label}
+                        </th>
+                      ))}
+                      <th className="w-8 md:hidden">
+                        <span className="sr-only">Open</span>
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {unassignedVendors.map((vendor) => (
+                      <tr key={vendor.id} className="border-t border-section">
+                        {columns.map((col) => (
+                          <td
+                            key={col.key}
+                            className={`px-4 py-3 ${hideOnMobile(col)}`}
+                          >
+                            {col.key === "name"
+                              ? vendor.name
+                              : col.key === "aliases"
+                                ? vendor.aliases && vendor.aliases.length > 0
+                                  ? vendor.aliases.join(", ")
+                                  : "—"
+                                : col.key === "accounts"
+                                  ? 0
+                                  : col.key === "open_bills"
+                                    ? "—"
+                                    : col.key === "status"
+                                      ? (
+                                          <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold">
+                                            {vendor.status === "active"
+                                              ? "Active"
+                                              : vendor.status || "—"}
+                                          </span>
+                                        )
+                                      : "—"}
+                          </td>
+                        ))}
+                        <td className="pr-4 text-right md:hidden" aria-hidden="true">
+                          →
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
             </>
           )}
         </section>

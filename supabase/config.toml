@@ -459,3 +459,8 @@ entrypoint = "./functions/read-approvals/index.js"
 enabled = true
 verify_jwt = true
 entrypoint = "./functions/decide-bill/index.js"
+
+[functions.read-vendors]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/read-vendors/index.js"
