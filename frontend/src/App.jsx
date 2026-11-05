@@ -14,6 +14,7 @@ import TermsOfServicePage from "./pages/TermsOfServicePage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import FunctionTestPage from "./pages/FunctionTestPage";
 import AccountSettingsPage from "./pages/AccountSettingsPage";
+import NotFoundPage from "./pages/NotFoundPage";
 import AppLayout from "./components/AppLayout";
 
 function App() {
@@ -40,6 +41,7 @@ function App() {
           {/* Dev-only page for calling edge functions directly */}
           <Route path="/dev/functions" element={<FunctionTestPage />} />
         </Route>
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   );
