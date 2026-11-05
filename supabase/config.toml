@@ -450,6 +450,9 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/delete-property/index.js"
 
+[functions.read-property-details]
+entrypoint = "./functions/read-property-details/index.js"
+
 [functions.read-approvals]
 enabled = true
 verify_jwt = true
