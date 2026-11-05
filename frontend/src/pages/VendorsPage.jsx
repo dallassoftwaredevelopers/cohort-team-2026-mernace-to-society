@@ -74,7 +74,9 @@ function VendorsPage() {
             serverMessage = "";
           }
         }
-        throw new Error(serverMessage || error.message || "Could not create vendor.");
+        throw new Error(
+          serverMessage || error.message || "Could not create vendor.",
+        );
       }
 
       if (data?.error) {
@@ -140,13 +142,11 @@ function VendorsPage() {
           />
         </div>
 
-        {/* Summary cards */}
-        <section className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
-          {cards.map(({ title, value, note }) => (
-            <div key={title} className="card">
-              <h3 className="text-sm font-semibold">{title}</h3>
-              <p className="mt-3 text-3xl font-bold">{value}</p>
-              {note && <p className="mt-1 text-xs">{note}</p>}
+        {serviceTypes.map((type) => (
+          <div key={type} className="mt-6">
+            <div className="flex items-baseline justify-between">
+              <h3 className="font-semibold">{type}</h3>
+              <span className="text-xs">0 vendors</span>
             </div>
           ))}
         </section>
@@ -337,7 +337,7 @@ function VendorsPage() {
           onSubmit={handleCreateVendor}
         />
       )}
-    </div>
+    </>
   );
 }
 
