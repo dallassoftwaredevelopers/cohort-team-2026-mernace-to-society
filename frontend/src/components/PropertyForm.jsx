@@ -42,7 +42,7 @@ function PropertyForm({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
-      <div className="my-auto w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl">
+      <div className="my-auto w-full max-w-2xl rounded-xl bg-white p-4 shadow-xl sm:p-6">
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-xl font-bold">
             {isEditing ? "Edit Property" : "Add Property"}
@@ -50,7 +50,7 @@ function PropertyForm({
           <button
             type="button"
             onClick={onCancel}
-            className="text-2xl text-gray-500 hover:text-black"
+            className="rounded-lg p-2 text-2xl leading-none text-gray-500 hover:text-black"
             aria-label="Close form"
             disabled={isSubmitting}
           >
@@ -169,13 +169,14 @@ function PropertyForm({
               <input
                 id="property-zip"
                 name="zip"
-                type="number"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]{5}"
+                maxLength={5}
                 value={formData.zip}
                 onChange={handleChange}
                 className={inputClassName}
                 placeholder="33101"
-                min="0"
-                max="99999"
               />
             </div>
 
@@ -205,7 +206,7 @@ function PropertyForm({
             </p>
           )}
 
-          <div className="flex justify-end gap-3 border-t border-section pt-5">
+          <div className="flex flex-col-reverse gap-2 border-t border-section pt-5 sm:flex-row sm:justify-end sm:gap-3">
             <button
               type="button"
               onClick={onCancel}

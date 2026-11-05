@@ -452,3 +452,23 @@ entrypoint = "./functions/delete-property/index.js"
 
 [functions.read-property-details]
 entrypoint = "./functions/read-property-details/index.js"
+
+[functions.read-approvals]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/read-approvals/index.js"
+
+[functions.decide-bill]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/decide-bill/index.js"
+
+[functions.read-vendors]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/read-vendors/index.js"
+
+[functions.update-bill]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/update-bill/index.js"

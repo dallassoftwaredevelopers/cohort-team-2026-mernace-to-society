@@ -1,62 +1,45 @@
-import { Link } from "react-router-dom"
-import Sidebar from "../components/Sidebar"
-import BillDetailsForm from "../components/BillDetailsForm"
-import UploadDocument from "../components/UploadDocument"
-import Footer from "../components/Footer"
+import { Link } from "react-router-dom";
+import BillDetailsForm from "../components/BillDetailsForm";
+import UploadDocument from "../components/UploadDocument";
 
 function UploadBillPage() {
-  
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
-      <main className="min-w-0 flex-1 p-8">
-        <section className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Upload a bill</h2>
-            <p className="mt-2 text-sm text-gray-600">
-              Upload a bill document or image, then review and complete its details.
-            </p>
-          </div>
-          <Link
-            to="/bills"
-            className="btn-secondary px-4 py-2 text-sm"
-          >
-            &larr; Return to Bills
-          </Link>
-        </section>
+    <>
+      <section className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="font-serif text-2xl font-bold">Upload a bill</h1>
+          <p className="mt-2 text-sm text-gray-600">
+            Upload a bill document or image, then review and complete its
+            details.
+          </p>
+        </div>
+        <Link to="/bills" className="btn-secondary px-4 py-2 text-sm">
+          &larr; Return to Bills
+        </Link>
+      </section>
 
-        <div className="mt-6 w-full space-y-6">
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <section className="flex min-h-[300px] flex-col items-center rounded-lg border border-gray-200 bg-white p-6">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Document Upload
-              </h2>
-
-              <p className="mt-1 text-sm text-gray-500">
-                Upload your bill or invoice (PDF, JPG, or PNG).
-              </p>
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <section className="card flex min-h-[300px] flex-col items-center">
+          <h2 className="text-lg font-bold">Document Upload</h2>
+          <p className="mt-1 text-sm text-gray-600">
+            Upload your bill or invoice (PDF, JPG, or PNG).
+          </p>
 
               <UploadDocument />
+              
             </section>
 
-            <section className="rounded-lg border border-gray-200 bg-white p-6">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Bill details
-              </h2>
+        <section className="card">
+          <h2 className="text-lg font-bold">Bill details</h2>
+          <p className="mt-1 text-sm text-gray-600">
+            Review or complete the bill details associated with this file.
+          </p>
 
-              <p className="mt-1 text-sm text-gray-500">
-                Review or complete the bill details associated with this file.
-              </p>
-              <BillDetailsForm />
-            </section>
-          </div>
-        </div>
-      </main>
-      <Footer />
+          <BillDetailsForm />
+        </section>
       </div>
-    </div>
+    </>
   );
 }
 
-export default UploadBillPage
+export default UploadBillPage;

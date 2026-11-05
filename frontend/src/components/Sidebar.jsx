@@ -1,6 +1,6 @@
-
-import { Link, NavLink, useNavigate } from "react-router-dom"
-import { supabase } from "../../utils/supabase"
+import { useEffect, useState } from "react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { supabase } from "../../utils/supabase";
 
 const navigationItems = [
   { to: "/dashboard", label: "Dashboard" },
@@ -8,60 +8,150 @@ const navigationItems = [
   { to: "/properties", label: "Properties" },
   { to: "/vendors", label: "Vendors" },
   { to: "/approvals", label: "Approvals" },
-]
+];
+
+const linkClassName =
+  "block rounded-lg px-4 py-3 text-slate-100 transition hover:bg-sidebar-hover";
 
 const navigationClassName = ({ isActive }) =>
-  `block rounded-lg px-4 py-3 transition ${
-    isActive
-      ? "bg-[#2861C5] font-medium text-white"
-      : "text-slate-100 hover:bg-[#2B405D]"
-  }`
+  isActive
+    ? "block rounded-lg bg-primary px-4 py-3 font-medium text-white"
+    : linkClassName;
 
 function Sidebar() {
+  const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const closeMenu = () => setIsOpen(false);
+
+  // Close on Escape and stop the page behind the drawer from scrolling
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKey = (event) => {
+      if (event.key === "Escape") closeMenu();
+    };
+
+    document.addEventListener("keydown", handleKey);
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
 
   async function handleLogout() {
     await supabase.auth.signOut();
     navigate("/login");
   }
+
   return (
-    <aside className="flex min-h-screen w-64 shrink-0 flex-col border-r border-[#2B405D] bg-[#192D4A] px-5 py-6">
-      <h1 className="mb-10 text-2xl font-bold text-white">Billio</h1>
-
-      <nav className="flex flex-1 flex-col gap-2">
-        {navigationItems.map(({ to, label }) => (
-          <NavLink key={to} to={to} className={navigationClassName}>
-            {label}
-          </NavLink>
-        ))}
-      </nav>
-
-      <div className="border-t border-[#2B405D] pt-5">
-        <Link
-          to="/settings"
-          className="mb-5 block rounded-lg px-4 py-3 text-slate-100 transition hover:bg-[#2B405D]"
-        >
-          Account Settings
-        </Link>
-        
-        <div className="flex items-center gap-3 px-2">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#8A9BB6] font-semibold text-[#192D4A]">
-            RS
-          </div>
-
-          <div>
-            <p className="text-sm font-medium text-white">Robert Smith</p>
-            <p className="text-xs text-slate-300">Admin</p>
-          </div>
-        </div>
+    <>
+      {/* Mobile top bar: hidden from md up */}
+      <header className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between bg-sidebar px-4 md:hidden">
         <button
-          onClick={handleLogout}
-          className="mb-5 mt-5 block w-full rounded-lg px-4 py-3 text-left text-slate-100 transition hover:bg-[#2B405D]"
+          type="button"
+          onClick={() => setIsOpen(true)}
+          aria-label="Open menu"
+          aria-expanded={isOpen}
+          aria-controls="app-sidebar"
+          className="rounded-lg p-2 text-white hover:bg-sidebar-hover"
         >
-          Log out
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <path d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
         </button>
-      </div>
-    </aside>
+        <span className="text-lg font-bold text-white">Billio</span>
+        <span
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-avatar text-xs font-semibold text-sidebar"
+          aria-hidden="true"
+        >
+          RS
+        </span>
+      </header>
+
+      {/* Backdrop behind the open drawer on mobile */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={closeMenu}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar: slide-in drawer on mobile, static column from md up */}
+      <aside
+        id="app-sidebar"
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col overflow-y-auto bg-sidebar px-5 py-6 transition-transform duration-200 ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        } md:static md:min-h-screen md:shrink-0 md:translate-x-0`}
+      >
+        <div className="mb-10 flex items-center justify-between">
+          <p className="text-2xl font-bold text-white">Billio</p>
+          <button
+            type="button"
+            onClick={closeMenu}
+            aria-label="Close menu"
+            className="rounded-lg p-2 text-2xl leading-none text-white hover:bg-sidebar-hover md:hidden"
+          >
+            &times;
+          </button>
+        </div>
+
+        <nav
+          aria-label="Main navigation"
+          className="flex flex-1 flex-col gap-2"
+        >
+          {navigationItems.map(({ to, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              onClick={closeMenu}
+              className={navigationClassName}
+            >
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="border-t border-sidebar-hover pt-5">
+          <Link
+            to="/settings"
+            onClick={closeMenu}
+            className={`mb-5 ${linkClassName}`}
+          >
+            Account Settings
+          </Link>
+
+          <div className="flex items-center gap-3 px-2">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sidebar-avatar font-semibold text-sidebar">
+              RS
+            </div>
+            <div>
+              <p className="text-sm font-medium text-white">Robert Smith</p>
+              <p className="text-xs text-slate-300">Admin</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className={`mt-5 w-full text-left ${linkClassName}`}
+          >
+            Log out
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }
 
