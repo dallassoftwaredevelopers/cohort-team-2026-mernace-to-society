@@ -9,12 +9,7 @@ const emptyVendor = {
 const inputClassName =
   "w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
-function VendorForm({
-  isSubmitting = false,
-  error = "",
-  onCancel,
-  onSubmit,
-}) {
+function VendorForm({ isSubmitting = false, error = "", onCancel, onSubmit }) {
   const [formData, setFormData] = useState(emptyVendor);
 
   function handleChange(event) {
@@ -38,13 +33,13 @@ function VendorForm({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
-      <div className="my-auto w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl">
+      <div className="my-auto w-full max-w-2xl rounded-xl bg-white p-4 shadow-xl sm:p-6">
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-xl font-bold">Add Vendor</h2>
           <button
             type="button"
             onClick={onCancel}
-            className="text-2xl text-gray-500 hover:text-black"
+            className="rounded-lg p-2 text-2xl leading-none text-gray-500 hover:text-black"
             aria-label="Close form"
             disabled={isSubmitting}
           >
@@ -119,7 +114,7 @@ function VendorForm({
             </p>
           )}
 
-          <div className="flex justify-end gap-3 border-t border-section pt-5">
+          <div className="flex flex-col-reverse gap-2 border-t border-section pt-5 sm:flex-row sm:justify-end sm:gap-3">
             <button
               type="button"
               onClick={onCancel}
