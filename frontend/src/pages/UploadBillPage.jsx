@@ -25,8 +25,9 @@ function UploadBillPage() {
             Upload your bill or invoice (PDF, JPG, or PNG).
           </p>
 
-          <UploadDocument />
-        </section>
+              <UploadDocument />
+              
+            </section>
 
         <section className="card">
           <h2 className="text-lg font-bold">Bill details</h2>
