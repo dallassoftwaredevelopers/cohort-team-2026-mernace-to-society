@@ -16,9 +16,16 @@ const billColumns = [
 	'Actions',
 ];
 
-const cellMessageClassName = 'px-4 py-12 text-center text-gray-600';
+const cellMessageClassName = "px-4 py-12 text-center text-gray-600";
+
+// Below md each row becomes a card with a label beside every value
+const stackedRowClassName =
+  "mb-4 block rounded-lg bg-white p-4 md:mb-0 md:table-row md:rounded-none md:border-t md:border-gray-200 md:bg-transparent md:p-0";
+const stackedCellClassName =
+  "flex justify-between gap-4 py-1 md:table-cell md:px-4 md:py-3";
 
 function BillsPage() {
+
 	const [open, setOpen] = useState(false);
 	const [bills, setBills] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -58,48 +65,46 @@ function BillsPage() {
 		setReloadCount((count) => count + 1);
 	}
 
-	return (
-		<div className="flex min-h-screen bg-white text-black">
-			<Sidebar />
-			<div className="flex min-w-0 flex-1 flex-col">
-				<main className="min-w-0 flex-1 p-4 md:p-8">
-					<section className="flex flex-wrap items-center justify-between gap-4">
-						<div>
-							<h1 className="font-serif text-2xl font-bold">Bills</h1>
-							<p className="mt-2 text-sm text-gray-600">
-								View and manage bills for your properties.
-							</p>
-						</div>
-						<div className="flex flex-wrap gap-3">
-							<div className="relative">
-								<button
-									onClick={() => setOpen(!open)}
-									className="btn-primary px-5 py-3 text-sm"
-								>
-									+ Add Bill ▾
-								</button>
-								{open && (
-									<div className="absolute right-0 z-10 mt-2 w-48 rounded-lg border border-secondary bg-white py-2 shadow-lg">
-										{[
-											{ label: 'Enter Manually', path: '/bills/manual' },
-											{ label: 'Upload Bill', path: '/bills/upload' },
-										].map(({ label, path }) => (
-											<button
-												key={label}
-												onClick={() => {
-													setOpen(false);
-													navigate(path);
-												}}
-												className="block w-full px-4 py-2 text-left text-sm font-semibold hover:bg-section"
-											>
-												{label}
-											</button>
-										))}
-									</div>
-								)}
-							</div>
-						</div>
-					</section>
+  return (
+    <>
+      <section className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="font-serif text-2xl font-bold">Bills</h1>
+          <p className="mt-2 text-sm text-gray-600">
+            View and manage bills for your properties.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setOpen(!open)}
+              className="btn-primary px-5 py-3 text-sm"
+            >
+              + Add Bill ▾
+            </button>
+            {open && (
+              <div className="absolute left-0 z-10 mt-2 w-48 sm:left-auto sm:right-0 rounded-lg border border-secondary bg-white py-2 shadow-lg">
+                {[
+                  { label: "Enter Manually", path: "/bills/manual" },
+                  { label: "Upload Bill", path: "/bills/upload" },
+                ].map(({ label, path }) => (
+                  <button
+                    key={label}
+                    onClick={() => {
+                      setOpen(false);
+                      navigate(path);
+                    }}
+                    className="block w-full px-4 py-2 text-left text-sm font-semibold hover:bg-section"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
 
 					<section className="card mt-8 overflow-x-auto">
 						<h2 className="border-b border-black pb-4 text-lg font-bold">
@@ -222,6 +227,7 @@ function BillsPage() {
 			)}
 		</div>
 	);
+
 }
 
 export default BillsPage;
