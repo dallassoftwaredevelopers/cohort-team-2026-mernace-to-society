@@ -4,6 +4,14 @@ import { encodeBase64 } from 'jsr:@std/encoding@^1/base64';
 // Set OPENROUTER_MODEL to try a different one without changing code.
 const DEFAULT_MODEL = 'google/gemini-2.5-flash';
 
+// If the main model's provider is down, OpenRouter tries this one next.
+// Also reads PDFs natively and supports strict JSON output.
+const FALLBACK_MODEL = 'openai/gpt-4o-mini';
+
+// Statuses that mean "busy or down right now", worth one more try
+const RETRYABLE_STATUSES = [429, 500, 502, 503, 504];
+const RETRY_DELAY_MS = 1500;
+
 // How OpenRouter turns a PDF into something the model can read:
 // 'native' = the model reads the PDF itself (needs a model that supports files)
 // 'cloudflare-ai' = OpenRouter converts it to text first, free, works with any model
@@ -71,26 +79,39 @@ export async function extractBillData({ bytes, mimeType, filename }) {
 			? { type: 'file', file: { filename, file_data: dataUrl } }
 			: { type: 'image_url', image_url: { url: dataUrl } };
 
-	const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-		method: 'POST',
-		headers: {
-			// Server-side secret, never shipped to the frontend
-			Authorization: `Bearer ${Deno.env.get('OPENROUTER_API_KEY')}`,
-			'Content-Type': 'application/json',
+	const requestBody = JSON.stringify({
+		// OpenRouter tries these in order if a provider fails
+		models: model === FALLBACK_MODEL ? [model] : [model, FALLBACK_MODEL],
+		messages: [
+			{ role: 'user', content: [{ type: 'text', text: PROMPT }, filePart] },
+		],
+		// Set explicitly so OpenRouter never falls back to its paid OCR engine
+		plugins: [{ id: 'file-parser', pdf: { engine: pdfEngine } }],
+		response_format: {
+			type: 'json_schema',
+			json_schema: { name: 'bill', strict: true, schema: BILL_SCHEMA },
 		},
-		body: JSON.stringify({
-			model,
-			messages: [
-				{ role: 'user', content: [{ type: 'text', text: PROMPT }, filePart] },
-			],
-			// Set explicitly so OpenRouter never falls back to its paid OCR engine
-			plugins: [{ id: 'file-parser', pdf: { engine: pdfEngine } }],
-			response_format: {
-				type: 'json_schema',
-				json_schema: { name: 'bill', strict: true, schema: BILL_SCHEMA },
-			},
-		}),
 	});
+
+	// Try up to 2 times: providers sometimes have brief outages (e.g. a 503)
+	let response;
+	for (let attempt = 1; attempt <= 2; attempt++) {
+		response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+			method: 'POST',
+			headers: {
+				// Server-side secret, never shipped to the frontend
+				Authorization: `Bearer ${Deno.env.get('OPENROUTER_API_KEY')}`,
+				'Content-Type': 'application/json',
+			},
+			body: requestBody,
+		});
+
+		if (response.ok || !RETRYABLE_STATUSES.includes(response.status)) break;
+		if (attempt === 1) {
+			console.warn(`OpenRouter ${response.status}, retrying once...`);
+			await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+		}
+	}
 
 	// fetch doesn't throw on 4xx/5xx, so check the status ourselves
 	if (!response.ok) {
@@ -98,5 +119,7 @@ export async function extractBillData({ bytes, mimeType, filename }) {
 	}
 
 	const data = await response.json();
+	// Logged so you can see in the function logs when the fallback model was used
+	console.log('Extracted with model:', data.model);
 	return JSON.parse(data.choices[0].message.content);
 }
