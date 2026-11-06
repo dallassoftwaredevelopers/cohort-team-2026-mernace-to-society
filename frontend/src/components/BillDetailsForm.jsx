@@ -15,8 +15,26 @@ const initialFormData = {
 const inputClassName =
 	'w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
 
-function BillDetailsForm() {
-	const [formData, setFormData] = useState(initialFormData);
+// Turns a bill row from the database into the form's field names
+function billToFormData(bill) {
+	return {
+		...initialFormData,
+		property: bill.property_id ?? '',
+		vendorAccount: bill.vendor_account_id ?? '',
+		invoiceNumber: bill.invoice_number ?? '',
+		amount: bill.amount == null ? '' : String(bill.amount),
+		invoiceDate: bill.issue_date ?? '',
+		dueDate: bill.due_date ?? '',
+	};
+}
+
+// Pass `bill` to edit an existing pending bill; leave it out to create a new one.
+// onSaved runs after a successful edit; onCancel shows a Cancel button.
+function BillDetailsForm({ bill, onSaved, onCancel }) {
+	const isEditing = Boolean(bill);
+	const [formData, setFormData] = useState(() =>
+		isEditing ? billToFormData(bill) : initialFormData,
+	);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState('');
 	const [successMessage, setSuccessMessage] = useState('');
@@ -91,15 +109,22 @@ function BillDetailsForm() {
 		try {
 			// Only send fields the bill table has columns for. Approver stays in
 			// the UI until the table supports it. The edge function looks up property_id from the vendor account.
-			const { error } = await supabase.functions.invoke('create-bill', {
-				body: {
-					invoice_number: formData.invoiceNumber,
-					amount: Number(formData.amount),
-					issue_date: formData.invoiceDate,
-					due_date: formData.dueDate,
-					vendor_account_id: formData.vendorAccount,
-				},
-			});
+			const billFields = {
+				invoice_number: formData.invoiceNumber,
+				amount: Number(formData.amount),
+				issue_date: formData.invoiceDate,
+				due_date: formData.dueDate,
+				vendor_account_id: formData.vendorAccount,
+			};
+
+			const { data, error } = isEditing
+				? await supabase.functions.invoke('update-bill', {
+						method: 'PATCH',
+						body: { id: bill.id, ...billFields },
+					})
+				: await supabase.functions.invoke('create-bill', {
+						body: billFields,
+					});
 
 			if (error) {
 				// The function's { error } message lives on the response body
@@ -108,6 +133,11 @@ function BillDetailsForm() {
 					details?.error ??
 						'The bill could not be submitted. Please try again.',
 				);
+			}
+
+			if (isEditing) {
+				onSaved?.(data?.data);
+				return;
 			}
 
 			setSuccessMessage('Bill submitted successfully.');
@@ -297,12 +327,28 @@ function BillDetailsForm() {
 			)}
 
 			<div className="flex justify-end gap-3 border-t border-gray-200 pt-5">
+				{onCancel && (
+					<button
+						type="button"
+						onClick={onCancel}
+						disabled={isSubmitting}
+						className="btn-secondary px-4 py-2 text-sm"
+					>
+						Cancel
+					</button>
+				)}
 				<button
 					type="submit"
 					disabled={isSubmitting}
 					className="rounded-md bg-[#2460D5] px-4 py-2 text-sm font-medium text-white hover:bg-[#194DB4] disabled:cursor-not-allowed disabled:opacity-60"
 				>
-					{isSubmitting ? 'Submitting...' : 'Review & Submit'}
+					{isSubmitting
+						? isEditing
+							? 'Saving...'
+							: 'Submitting...'
+						: isEditing
+							? 'Save Changes'
+							: 'Review & Submit'}
 				</button>
 			</div>
 		</form>
