@@ -1,16 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../utils/supabase";
 
-// TEMPORARY: test adding a vendor via edge function "create-vendor"
-// Delete this once the real LoginPage exists.
+// TEMPORARY: dev page for testing bill extraction (extract-bill edge function).
+// The test login can be deleted once the real LoginPage exists.
 const TEST_EMAIL = "test@example.com";
 const TEST_PASSWORD = "password123";
-
-const testVendor = {
-  name: "Consolidated Edison",
-  aliases: ["ConEd", "Con Edison"],
-  portal_url: "https://www.coned.com",
-};
 
 function FunctionTestPage() {
   const [user, setUser] = useState(null);
@@ -52,7 +46,7 @@ function FunctionTestPage() {
         : error.message;
       setResult({ status, body });
     } else {
-      setResult({ status: 201, body: data });
+      setResult({ status: "success", body: data });
     }
     setLoading(false);
   }
@@ -86,7 +80,7 @@ function FunctionTestPage() {
 
   return (
     <>
-      <h1 className="font-serif text-2xl font-bold">Edge Function Tests</h1>
+      <h1 className="font-serif text-2xl font-bold">Bill Extraction Test</h1>
       <p className="mt-2 text-sm text-gray-600">
         Logged in as:{" "}
         <span className="font-medium">{user?.email ?? "nobody"}</span>
@@ -109,14 +103,6 @@ function FunctionTestPage() {
           </button>
         )}
 
-        <button
-          onClick={() => callFunction("create-vendor", testVendor)}
-          disabled={loading}
-          className="rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          Send test vendor
-        </button>
-
         <label
           className={`rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium text-white hover:bg-blue-700 ${
             loading || !user ? "pointer-events-none opacity-50" : "cursor-pointer"
@@ -132,11 +118,6 @@ function FunctionTestPage() {
           />
         </label>
       </div>
-
-      <p className="mt-6 text-sm text-gray-600">Test vendor:</p>
-      <pre className="mt-1 overflow-x-auto rounded-lg bg-gray-900 p-4 text-sm text-gray-100">
-        {JSON.stringify(testVendor, null, 2)}
-      </pre>
 
       {result && (
         <>
