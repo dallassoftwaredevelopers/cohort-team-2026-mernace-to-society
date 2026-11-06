@@ -57,6 +57,33 @@ function FunctionTestPage() {
     setLoading(false);
   }
 
+  // Upload a bill to the "invoices" bucket, then run extract-bill on it.
+  // Same steps the real upload flow will take, in one click.
+  async function uploadAndExtract(event) {
+    const file = event.target.files?.[0];
+    event.target.value = ""; // lets you pick the same file again
+    if (!file) return;
+
+    const extension = file.name.split(".").pop().toLowerCase();
+    const path = `${crypto.randomUUID()}.${extension}`;
+
+    setLoading(true);
+    setResult({ status: "uploading…", body: file.name });
+
+    const { error: uploadError } = await supabase.storage
+      .from("invoices")
+      .upload(path, file, { contentType: file.type, upsert: false });
+
+    if (uploadError) {
+      setResult({ status: "upload error", body: uploadError.message });
+      setLoading(false);
+      return;
+    }
+
+    setResult({ status: "extracting…", body: `${file.name} → ${path}` });
+    await callFunction("extract-bill", { path });
+  }
+
   return (
     <>
       <h1 className="font-serif text-2xl font-bold">Edge Function Tests</h1>
@@ -89,6 +116,21 @@ function FunctionTestPage() {
         >
           Send test vendor
         </button>
+
+        <label
+          className={`rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium text-white hover:bg-blue-700 ${
+            loading || !user ? "pointer-events-none opacity-50" : "cursor-pointer"
+          }`}
+        >
+          {loading ? "Working…" : "Upload & extract bill"}
+          <input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+            onChange={uploadAndExtract}
+            disabled={loading || !user}
+            className="hidden"
+          />
+        </label>
       </div>
 
       <p className="mt-6 text-sm text-gray-600">Test vendor:</p>
