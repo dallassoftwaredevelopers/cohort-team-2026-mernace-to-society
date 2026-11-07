@@ -468,6 +468,11 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/read-vendors/index.js"
 
+[functions.delete-vendor]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/delete-vendor/index.js"
+
 [functions.update-bill]
 enabled = true
 verify_jwt = true
