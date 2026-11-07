@@ -1,16 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../utils/supabase";
 
-// TEMPORARY: test adding a vendor via edge function "create-vendor"
-// Delete this once the real LoginPage exists.
+// TEMPORARY: dev page for testing bill extraction (extract-bill edge function).
+// The test login can be deleted once the real LoginPage exists.
 const TEST_EMAIL = "test@example.com";
 const TEST_PASSWORD = "password123";
-
-const testVendor = {
-  name: "Consolidated Edison",
-  aliases: ["ConEd", "Con Edison"],
-  portal_url: "https://www.coned.com",
-};
 
 function FunctionTestPage() {
   const [user, setUser] = useState(null);
@@ -52,14 +46,41 @@ function FunctionTestPage() {
         : error.message;
       setResult({ status, body });
     } else {
-      setResult({ status: 201, body: data });
+      setResult({ status: "success", body: data });
     }
     setLoading(false);
   }
 
+  // Upload a bill to the "invoices" bucket, then run extract-bill on it.
+  // Same steps the real upload flow will take, in one click.
+  async function uploadAndExtract(event) {
+    const file = event.target.files?.[0];
+    event.target.value = ""; // lets you pick the same file again
+    if (!file) return;
+
+    const extension = file.name.split(".").pop().toLowerCase();
+    const path = `${crypto.randomUUID()}.${extension}`;
+
+    setLoading(true);
+    setResult({ status: "uploading…", body: file.name });
+
+    const { error: uploadError } = await supabase.storage
+      .from("invoices")
+      .upload(path, file, { contentType: file.type, upsert: false });
+
+    if (uploadError) {
+      setResult({ status: "upload error", body: uploadError.message });
+      setLoading(false);
+      return;
+    }
+
+    setResult({ status: "extracting…", body: `${file.name} → ${path}` });
+    await callFunction("extract-bill", { path });
+  }
+
   return (
     <>
-      <h1 className="font-serif text-2xl font-bold">Edge Function Tests</h1>
+      <h1 className="font-serif text-2xl font-bold">Bill Extraction Test</h1>
       <p className="mt-2 text-sm text-gray-600">
         Logged in as:{" "}
         <span className="font-medium">{user?.email ?? "nobody"}</span>
@@ -82,19 +103,21 @@ function FunctionTestPage() {
           </button>
         )}
 
-        <button
-          onClick={() => callFunction("create-vendor", testVendor)}
-          disabled={loading}
-          className="rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        <label
+          className={`rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium text-white hover:bg-blue-700 ${
+            loading || !user ? "pointer-events-none opacity-50" : "cursor-pointer"
+          }`}
         >
-          Send test vendor
-        </button>
+          {loading ? "Working…" : "Upload & extract bill"}
+          <input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+            onChange={uploadAndExtract}
+            disabled={loading || !user}
+            className="hidden"
+          />
+        </label>
       </div>
-
-      <p className="mt-6 text-sm text-gray-600">Test vendor:</p>
-      <pre className="mt-1 overflow-x-auto rounded-lg bg-gray-900 p-4 text-sm text-gray-100">
-        {JSON.stringify(testVendor, null, 2)}
-      </pre>
 
       {result && (
         <>
