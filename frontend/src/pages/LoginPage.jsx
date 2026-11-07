@@ -7,6 +7,7 @@ const LoginPage = () => {
   const [email, setEmail] =useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [infoMessage, setInfoMessage] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -17,18 +18,52 @@ const LoginPage = () => {
     event.preventDefault();
     setIsSubmitting(true);
     setErrorMessage("");
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: password,
-    });
+    setInfoMessage("");
+
+    let result;
+    if (isSignUp) {
+      result = await supabase.auth.signUp({
+        email: email,
+        password: password,
+      });
+    } else {
+      result = await supabase.auth.signInWithPassword ({
+        email: email,
+        password: password,
+      })
+    }
+
+    const { data, error } = result;
     setIsSubmitting(false);
+
+    const accountAlreadyExists = 
+      isSignUp && (error?.code === "user_already_exists" || 
+      (!error && data.user && data.user.identifies?.length === 0));
+
+    if (accountAlreadyExists) {
+      setErrorMessage("An Account with this email already exists. Please log in instead.");
+      setIsSignUp(false);
+      setPassword("");
+      return;
+    }
 
     if (error) {
       setErrorMessage(error.message);
       return;
     }
 
+    if (isSignUp && !data.session) {
+      setInfoMessage("Account created! Check your email to confirm it, then log in.");
+      return;
+    }
+
     navigate("/dashboard");
+  }
+
+  function handleToggleMode() {
+    setIsSignUp(!isSignUp);
+    setPassword("");
+    setErrorMessage("");
   }
 
   let logInSignUpSubmitButtonLabel;
@@ -83,6 +118,7 @@ const LoginPage = () => {
                   type="email"
                   autoComplete="username"
                   required
+                  placeholder="you@example.com"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   className={inputClassName}
@@ -92,8 +128,9 @@ const LoginPage = () => {
               <input
                 id="password"
                 type="password"
-                autoComplete="current-password"
+                autoComplete={isSignUp ? "new-password" : "current-password"}
                 required
+                placeholder={isSignUp ? "Create strong password" : "Enter your password"}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 className={inputClassName}
@@ -105,6 +142,13 @@ const LoginPage = () => {
                   {errorMessage}
                 </p>
               )}
+
+              {infoMessage && (
+                <p role="status" className="rounded-md font-sans bg-green-50 px-3 py-2 text-sm text-green-700">
+                  {infoMessage}
+                </p>
+              )}
+
               <button 
                 type="submit"
                 disabled={isSubmitting}
@@ -115,7 +159,7 @@ const LoginPage = () => {
             </form>
             <button
               type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
+              onClick={handleToggleMode}
               className="mt-2 cursor-pointer text-sm font-semibold text-primary hover:underline "
             >
               {isSignUp ? "Already have an account? Log in" : "Don't have an account? Sign up"}
