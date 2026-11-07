@@ -40,7 +40,9 @@ function VendorForm({
   async function handleSubmit(event) {
     event.preventDefault();
     
-    const aliases = formData.aliases
+const aliases = Array.isArray(formData.aliases)
+  ? formData.aliases
+  : (formData.aliases || "")
       .split(/[\n,]/)
       .map((alias) => alias.trim())
       .filter(Boolean);
