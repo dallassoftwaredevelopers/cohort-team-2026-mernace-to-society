@@ -41,6 +41,7 @@ function VendorsPage() {
   const [formError, setFormError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [selectedVendorIds, setSelectedVendorIds] = useState(new Set());
+  const [editVendorId, setEditVendorId] = useState(null);
 
   // Vendors with no vendor_account rows must not be silently omitted.
   const unassignedVendors = vendors.filter(
@@ -56,6 +57,7 @@ function VendorsPage() {
 
   function closeVendorForm() {
     setShowVendorForm(false);
+    setEditVendorId(null);
     setFormError("");
   }
 
@@ -110,6 +112,56 @@ function VendorsPage() {
       );
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function editVendor(vendorData) {
+    if (!editVendorId) return;
+
+    setIsSubmitting(true);
+    setFormError("");
+    setSuccessMessage("");
+
+    try {
+      const { data, error: invokeError } =
+        await supabase.functions.invoke("update-vendor", {
+          method: "PATCH",
+          body: { ...vendorData, id: editVendorId },
+        });
+
+      if (invokeError) {
+        let serverMessage = "";
+
+        if (typeof invokeError.context?.json === "function") {
+          try {
+            const responseBody = await invokeError.context.json();
+            serverMessage = responseBody?.error || "";
+          } catch {
+            serverMessage = "";
+          }
+        }
+
+        throw new Error(
+          serverMessage || invokeError.message || "Could not update vendor.",
+        );
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      setSuccessMessage("Vendor updated successfully.");
+      closeVendorForm();
+      await fetchVendors();
+    } catch (caughtError) {
+      setFormError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Could not update vendor.",
+      );
+    } finally {
+      setIsSubmitting(false);
+      setEditVendorId(null);
     }
   }
 
@@ -331,6 +383,10 @@ function VendorsPage() {
                             </th>
                           ))}
 
+                          <th className="hidden px-4 py-3 font-semibold md:table-cell">
+                            Actions
+                          </th>
+
                           <th className="w-8 md:hidden">
                             <span className="sr-only">Open</span>
                           </th>
@@ -402,6 +458,21 @@ function VendorsPage() {
                                 </td>
                               ))}
 
+                              <td className="hidden px-4 py-3 md:table-cell">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setFormError("");
+                                    setEditVendorId(vendor.id);
+                                    setShowVendorForm(true);
+                                  }}
+                                  className="cursor-pointer text-sm text-primary underline"
+                                  aria-label={`Edit ${vendor.name}`}
+                                >
+                                  Edit
+                                </button>
+                              </td>
+
                               <td
                                 className="pr-4 text-right md:hidden"
                                 aria-hidden="true"
@@ -441,6 +512,10 @@ function VendorsPage() {
                             {col.label}
                           </th>
                         ))}
+
+                        <th className="hidden px-4 py-3 font-semibold md:table-cell">
+                          Actions
+                        </th>
 
                         <th className="w-8 md:hidden">
                           <span className="sr-only">Open</span>
@@ -495,6 +570,35 @@ function VendorsPage() {
                           ))}
 
                           <td
+                            className="px-4 py-3 hidden md:table-cell"
+                            aria-label="Actions"
+                          >
+                            {editVendorId && editVendorId === vendor.id ? (
+                              <button
+                                type="button"
+                                onClick={closeVendorForm}
+                                className="underline text-secondary cursor-pointer text-sm"
+                                aria-label="Cancel edit"
+                              >
+                                Cancel
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFormError("");
+                                  setEditVendorId(vendor.id);
+                                  setShowVendorForm(true);
+                                }}
+                                className="underline text-primary cursor-pointer text-sm hover:underline-orange-500"
+                                aria-label={`Edit ${vendor.name}`}
+                              >
+                                Edit
+                              </button>
+                            )}
+                          </td>
+
+                          <td
                             className="pr-4 text-right md:hidden"
                             aria-hidden="true"
                           >
@@ -504,6 +608,7 @@ function VendorsPage() {
                       ))}
                     </tbody>
                   </table>
+
                 </div>
               )}
             </>
@@ -516,7 +621,13 @@ function VendorsPage() {
           isSubmitting={isSubmitting}
           error={formError}
           onCancel={closeVendorForm}
-          onSubmit={handleCreateVendor}
+          onSubmit={editVendorId ? editVendor : handleCreateVendor}
+          editMode={!!editVendorId}
+          vendorData={
+            editVendorId
+              ? vendors.find((vendor) => vendor.id === editVendorId)
+              : null
+          }
         />
       )}
     </div>
