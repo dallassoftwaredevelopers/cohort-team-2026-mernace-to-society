@@ -30,11 +30,12 @@ function billToFormData(bill) {
 
 // Pass `bill` to edit an existing pending bill; leave it out to create a new one.
 // onSaved runs after a successful edit; onCancel shows a Cancel button.
-function BillDetailsForm({ bill, onSaved, onCancel }) {
+function BillDetailsForm({ bill, initialValues, onSaved, onCancel }) {
 	const isEditing = Boolean(bill);
-	const [formData, setFormData] = useState(() =>
-		isEditing ? billToFormData(bill) : initialFormData,
-	);
+	const [formData, setFormData] = useState(() => {
+		const startingValues = bill ?? initialValues;
+		return startingValues ? billToFormData(startingValues) : initialFormData;
+	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState('');
 	const [successMessage, setSuccessMessage] = useState('');
