@@ -477,3 +477,8 @@ entrypoint = "./functions/delete-vendor/index.js"
 enabled = true
 verify_jwt = true
 entrypoint = "./functions/update-bill/index.js"
+
+[functions.extract-bill]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/extract-bill/index.js"
