@@ -30,17 +30,41 @@ const columns = [
 
 const hideOnMobile = (col) => (col.mobile ? "" : "hidden md:table-cell");
 
+// Renders one vendor cell; accountCount differs between service tables and Unassigned
+function renderVendorCell(col, vendor, accountCount) {
+  if (col.key === "name") return vendor.name;
+  if (col.key === "aliases") {
+    return vendor.aliases && vendor.aliases.length > 0
+      ? vendor.aliases.join(", ")
+      : "—";
+  }
+  if (col.key === "accounts") return accountCount;
+  if (col.key === "status") {
+    return (
+      <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold">
+        {vendor.status === "active" ? "Active" : vendor.status || "—"}
+      </span>
+    );
+  }
+  return "—";
+}
+
 function VendorsPage() {
-  const { vendors, loading, error, fetchVendors } = useVendors();
+  const { vendors, loading, error, fetchVendors, deleteVendors } = useVendors();
+
   const [showVendorForm, setShowVendorForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [formError, setFormError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [selectedVendorIds, setSelectedVendorIds] = useState(new Set());
 
   // Vendors with no vendor_account rows must not be silently omitted.
   const unassignedVendors = vendors.filter(
     (vendor) => !(vendor.vendor_account || []).length,
   );
+
+  const allDisplayedVendors = vendors;
 
   // Retrieve vendors when the page loads.
   useEffect(() => {
@@ -58,28 +82,32 @@ function VendorsPage() {
     setSuccessMessage("");
 
     try {
-      const { data, error } = await supabase.functions.invoke("create-vendor", {
-        body: vendorData,
-      });
+      const { data, error: invokeError } = await supabase.functions.invoke(
+        "create-vendor",
+        { body: vendorData },
+      );
 
-      if (error) {
+      if (invokeError) {
         let serverMessage = "";
-        if (typeof error.context?.json === "function") {
+
+        if (typeof invokeError.context?.json === "function") {
           try {
-            const responseBody = await error.context.json();
+            const responseBody = await invokeError.context.json();
             serverMessage = responseBody?.error || "";
           } catch {
             serverMessage = "";
           }
         }
+
         throw new Error(
-          serverMessage || error.message || "Could not create vendor.",
+          serverMessage || invokeError.message || "Could not create vendor.",
         );
       }
 
       if (data?.error) {
         throw new Error(data.error);
       }
+
       if (!data?.data) {
         throw new Error("The server did not return the created vendor.");
       }
@@ -87,13 +115,138 @@ function VendorsPage() {
       setSuccessMessage("Vendor created successfully.");
       closeVendorForm();
       await fetchVendors();
-    } catch (error) {
+    } catch (caughtError) {
       setFormError(
-        error instanceof Error ? error.message : "Could not create vendor.",
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Could not create vendor.",
       );
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  function toggleVendorSelection(vendorId) {
+    setSelectedVendorIds((prev) => {
+      const next = new Set(prev);
+
+      if (next.has(vendorId)) {
+        next.delete(vendorId);
+      } else {
+        next.add(vendorId);
+      }
+
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (
+      selectedVendorIds.size === allDisplayedVendors.length &&
+      allDisplayedVendors.length > 0
+    ) {
+      setSelectedVendorIds(new Set());
+    } else {
+      setSelectedVendorIds(new Set(allDisplayedVendors.map((v) => v.id)));
+    }
+  }
+
+  const allSelected =
+    allDisplayedVendors.length > 0 &&
+    selectedVendorIds.size === allDisplayedVendors.length;
+
+  const someSelected =
+    selectedVendorIds.size > 0 &&
+    selectedVendorIds.size < allDisplayedVendors.length;
+
+  async function handleDeleteSelected() {
+    if (selectedVendorIds.size === 0) return;
+
+    const count = selectedVendorIds.size;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${count} vendor${count !== 1 ? "s" : ""}?`,
+    );
+
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+    setFormError("");
+    setSuccessMessage("");
+
+    try {
+      await deleteVendors(Array.from(selectedVendorIds));
+
+      setSuccessMessage(
+        `${count} vendor${count !== 1 ? "s" : ""} deleted successfully.`,
+      );
+
+      setSelectedVendorIds(new Set());
+      await fetchVendors();
+    } catch (caughtError) {
+      setFormError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Could not delete vendors.",
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  const vendorsByService = serviceTypes.map((type) => ({
+    type,
+    vendors: vendors.filter((vendor) =>
+      (vendor.vendor_account || []).some(
+        (account) => account.service?.toLowerCase() === type.toLowerCase(),
+      ),
+    ),
+  }));
+
+  // Shared header row: select column, data columns, mobile arrow column
+  const tableHead = (
+    <thead>
+      <tr className="text-xs uppercase">
+        <th className="w-8 px-4 py-3 font-semibold">
+          <span className="sr-only">Select</span>
+        </th>
+        {columns.map((col) => (
+          <th
+            key={col.key}
+            className={`px-4 py-3 font-semibold ${hideOnMobile(col)}`}
+          >
+            {col.label}
+          </th>
+        ))}
+        <th className="w-8 md:hidden">
+          <span className="sr-only">Open</span>
+        </th>
+      </tr>
+    </thead>
+  );
+
+  function renderVendorRow(vendor, accountCount) {
+    return (
+      <tr key={vendor.id} className="border-t border-section">
+        <td className="px-4 py-3">
+          <input
+            type="checkbox"
+            checked={selectedVendorIds.has(vendor.id)}
+            onChange={() => toggleVendorSelection(vendor.id)}
+            className="h-4 w-4 cursor-pointer"
+            aria-label={`Select ${vendor.name}`}
+          />
+        </td>
+        {columns.map((col) => (
+          <td key={col.key} className={`px-4 py-3 ${hideOnMobile(col)}`}>
+            {renderVendorCell(col, vendor, accountCount)}
+          </td>
+        ))}
+        <td className="pr-4 text-right md:hidden" aria-hidden="true">
+          →
+        </td>
+      </tr>
+    );
   }
 
   return (
@@ -115,6 +268,12 @@ function VendorsPage() {
       {successMessage && (
         <p role="status" className="mt-4 text-sm text-green-700">
           {successMessage}
+        </p>
+      )}
+
+      {formError && (
+        <p role="alert" className="mt-4 text-sm text-red-700">
+          {formError}
         </p>
       )}
 
@@ -148,121 +307,82 @@ function VendorsPage() {
         ))}
       </section>
 
+      {/* Bulk delete */}
+      <div className="mt-6 flex flex-wrap items-center gap-4">
+        <button
+          type="button"
+          onClick={handleDeleteSelected}
+          disabled={selectedVendorIds.size === 0 || isDeleting}
+          className="btn-secondary w-full cursor-pointer px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+        >
+          {isDeleting
+            ? "Deleting..."
+            : `Delete Selected (${selectedVendorIds.size})`}
+        </button>
+      </div>
+
       {/* Vendors by service type */}
       <section className="card mt-8">
-        <div className="flex items-baseline justify-between border-b border-black pb-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-black pb-4">
           <h2 className="text-lg font-bold">Vendors by Service Type</h2>
-          <span className="text-sm">{vendors.length} total vendors</span>
+
+          <div className="flex items-center gap-4">
+            <label className="flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                ref={(el) => {
+                  if (el) el.indeterminate = someSelected;
+                }}
+                onChange={toggleSelectAll}
+                className="h-4 w-4 cursor-pointer"
+              />
+              Select All
+            </label>
+
+            <span className="text-sm">{vendors.length} total vendors</span>
+          </div>
         </div>
 
-        {loading && vendors.length === 0 && (
+        {loading && vendors.length === 0 ? (
           <p className="mt-4 text-sm text-gray-600">Loading vendors…</p>
-        )}
-        {!(loading && vendors.length === 0) && (
+        ) : (
           <>
-            {serviceTypes.map((type) => {
-              const typeVendors = vendors.filter((vendor) =>
-                (vendor.vendor_account || []).some(
-                  (account) =>
-                    account.service?.toLowerCase() === type.toLowerCase(),
-                ),
-              );
-              return (
-                <div key={type} className="mt-6">
-                  <div className="flex items-baseline justify-between">
-                    <h3 className="font-semibold">{type}</h3>
-                    <span className="text-xs">
-                      {typeVendors.length} vendors
-                    </span>
-                  </div>
-
-                  <table className="mt-2 w-full rounded-lg bg-white text-left text-sm">
-                    <thead>
-                      <tr className="text-xs uppercase">
-                        {columns.map((col) => (
-                          <th
-                            key={col.key}
-                            className={`px-4 py-3 font-semibold ${hideOnMobile(col)}`}
-                          >
-                            {col.label}
-                          </th>
-                        ))}
-                        <th className="w-8 md:hidden">
-                          <span className="sr-only">Open</span>
-                        </th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {error ? (
-                        <tr className="border-t border-section">
-                          <td
-                            colSpan={columns.length + 1}
-                            className="px-4 py-3 text-red-700"
-                          >
-                            {error}
-                          </td>
-                        </tr>
-                      ) : typeVendors.length === 0 ? (
-                        <tr className="border-t border-section">
-                          <td
-                            colSpan={columns.length + 1}
-                            className="px-4 py-3 text-gray-600"
-                          >
-                            No vendors for this service type.
-                          </td>
-                        </tr>
-                      ) : (
-                        typeVendors.map((vendor) => (
-                          <tr
-                            key={vendor.id}
-                            className="border-t border-section"
-                          >
-                            {columns.map((col) => (
-                              <td
-                                key={col.key}
-                                className={`px-4 py-3 ${hideOnMobile(col)}`}
-                              >
-                                {col.key === "name" ? (
-                                  vendor.name
-                                ) : col.key === "aliases" ? (
-                                  vendor.aliases &&
-                                  vendor.aliases.length > 0 ? (
-                                    vendor.aliases.join(", ")
-                                  ) : (
-                                    "—"
-                                  )
-                                ) : col.key === "accounts" ? (
-                                  (vendor.vendor_account || []).filter(
-                                    (account) =>
-                                      account.service?.toLowerCase() ===
-                                      type.toLowerCase(),
-                                  ).length
-                                ) : col.key === "status" ? (
-                                  <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold">
-                                    {vendor.status === "active"
-                                      ? "Active"
-                                      : vendor.status || "—"}
-                                  </span>
-                                ) : (
-                                  "—"
-                                )}
-                              </td>
-                            ))}
-                            <td
-                              className="pr-4 text-right md:hidden"
-                              aria-hidden="true"
-                            >
-                              →
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+            {vendorsByService.map(({ type, vendors: typeVendors }) => (
+              <div key={type} className="mt-6">
+                <div className="flex items-baseline justify-between">
+                  <h3 className="font-semibold">{type}</h3>
+                  <span className="text-xs">{typeVendors.length} vendors</span>
                 </div>
-              );
-            })}
+
+                <table className="mt-2 w-full rounded-lg bg-white text-left text-sm">
+                  {tableHead}
+                  <tbody>
+                    {typeVendors.length === 0 ? (
+                      <tr className="border-t border-section">
+                        <td
+                          colSpan={columns.length + 2}
+                          className="px-4 py-3 text-gray-600"
+                        >
+                          No vendors for this service type.
+                        </td>
+                      </tr>
+                    ) : (
+                      typeVendors.map((vendor) =>
+                        renderVendorRow(
+                          vendor,
+                          (vendor.vendor_account || []).filter(
+                            (account) =>
+                              account.service?.toLowerCase() ===
+                              type.toLowerCase(),
+                          ).length,
+                        ),
+                      )
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            ))}
 
             {unassignedVendors.length > 0 && (
               <div className="mt-6">
@@ -274,59 +394,11 @@ function VendorsPage() {
                 </div>
 
                 <table className="mt-2 w-full rounded-lg bg-white text-left text-sm">
-                  <thead>
-                    <tr className="text-xs uppercase">
-                      {columns.map((col) => (
-                        <th
-                          key={col.key}
-                          className={`px-4 py-3 font-semibold ${hideOnMobile(col)}`}
-                        >
-                          {col.label}
-                        </th>
-                      ))}
-                      <th className="w-8 md:hidden">
-                        <span className="sr-only">Open</span>
-                      </th>
-                    </tr>
-                  </thead>
-
+                  {tableHead}
                   <tbody>
-                    {unassignedVendors.map((vendor) => (
-                      <tr key={vendor.id} className="border-t border-section">
-                        {columns.map((col) => (
-                          <td
-                            key={col.key}
-                            className={`px-4 py-3 ${hideOnMobile(col)}`}
-                          >
-                            {col.key === "name" ? (
-                              vendor.name
-                            ) : col.key === "aliases" ? (
-                              vendor.aliases && vendor.aliases.length > 0 ? (
-                                vendor.aliases.join(", ")
-                              ) : (
-                                "—"
-                              )
-                            ) : col.key === "accounts" ? (
-                              0
-                            ) : col.key === "status" ? (
-                              <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold">
-                                {vendor.status === "active"
-                                  ? "Active"
-                                  : vendor.status || "—"}
-                              </span>
-                            ) : (
-                              "—"
-                            )}
-                          </td>
-                        ))}
-                        <td
-                          className="pr-4 text-right md:hidden"
-                          aria-hidden="true"
-                        >
-                          →
-                        </td>
-                      </tr>
-                    ))}
+                    {unassignedVendors.map((vendor) =>
+                      renderVendorRow(vendor, 0),
+                    )}
                   </tbody>
                 </table>
               </div>

@@ -42,10 +42,45 @@ export function useVendors() {
 		}
 	}, []);
 
+	// DELETE VENDORS (bulk)
+	const deleteVendors = useCallback(async (ids) => {
+		if (!Array.isArray(ids) || ids.length === 0) {
+			throw new Error("No vendor IDs provided for deletion.");
+		}
+
+		try {
+			const { data, error: invokeError } = await supabase.functions.invoke(
+				"delete-vendor",
+				{
+					method: "DELETE",
+					body: { ids },
+				},
+			);
+
+			if (invokeError) {
+				throw invokeError;
+			}
+
+			if (data?.error) {
+				throw new Error(data.error);
+			}
+
+			return data;
+		} catch (err) {
+			const message =
+				err instanceof Error
+					? err.message
+					: "Unable to delete vendors.";
+			setError(message);
+			throw err;
+		}
+	}, []);
+
 	return {
 		vendors,
 		loading,
 		error,
 		fetchVendors,
+		deleteVendors,
 	};
 }
