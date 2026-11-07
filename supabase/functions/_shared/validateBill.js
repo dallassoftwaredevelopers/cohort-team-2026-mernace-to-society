@@ -25,8 +25,26 @@ export function validateBill(body) {
 
 	// Only these fields are read. Anything else in the body is ignored. We can always add more!
 	// property_id isn't read either: the edge function looks it up from the vendor account.
-	const { invoice_number, amount, issue_date, due_date, vendor_account_id } =
-		body;
+	const {
+		invoice_number,
+		amount,
+		issue_date,
+		due_date,
+		vendor_account_id,
+		review_reason,
+	} = body;
+
+	if (review_reason != null && typeof review_reason !== 'string') {
+		return { ok: false, error: 'Review reason must be text' };
+	}
+	const normalizedReviewReason =
+		typeof review_reason === 'string' ? review_reason.trim() : null;
+	if (normalizedReviewReason && normalizedReviewReason.length > 2000) {
+		return {
+			ok: false,
+			error: 'Review reason must be 2000 characters or less',
+		};
+	}
 
 	if (typeof invoice_number !== 'string' || invoice_number.trim().length === 0) {
 		return { ok: false, error: 'Invoice number is required' };
@@ -74,6 +92,7 @@ export function validateBill(body) {
 			issue_date,
 			due_date,
 			vendor_account_id,
+			review_reason: normalizedReviewReason || null,
 		},
 	};
 }

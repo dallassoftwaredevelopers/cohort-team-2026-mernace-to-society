@@ -7,6 +7,7 @@ const valid = {
 	issue_date: '2026-10-15',
 	due_date: '2026-11-01',
 	vendor_account_id: '3f2b8c1e-9a4d-4e6f-8b7a-1c2d3e4f5a6b',
+	review_reason: null,
 };
 
 Deno.test('accepts a valid bill', () => {
@@ -21,6 +22,16 @@ Deno.test('trims the invoice number', () => {
 Deno.test('rounds amount to cents', () => {
 	const result = validateBill({ ...valid, amount: 10.456 });
 	assertEquals(result.value.amount, 10.46);
+});
+
+Deno.test('trims the review reason', () => {
+	const result = validateBill({ ...valid, review_reason: '  Please review  ' });
+	assertEquals(result.value.review_reason, 'Please review');
+});
+
+Deno.test('normalizes a blank review reason to null', () => {
+	const result = validateBill({ ...valid, review_reason: '   ' });
+	assertEquals(result.value.review_reason, null);
 });
 
 Deno.test('allows due date on the issue date', () => {
@@ -65,6 +76,8 @@ const invalidCases = [
 	['missing vendor account', { ...valid, vendor_account_id: undefined }],
 	['vendor account not a uuid', { ...valid, vendor_account_id: 'FPL' }],
 	['vendor account as number', { ...valid, vendor_account_id: 42 }],
+	['review reason as number', { ...valid, review_reason: 42 }],
+	['review reason too long', { ...valid, review_reason: 'x'.repeat(2001) }],
 ];
 
 for (const [label, input] of invalidCases) {

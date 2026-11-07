@@ -48,7 +48,7 @@ export default {
 				...result.value,
 				property_id: account.property_id,
 				created_by: user.id,
-				status: 'pending',
+				status: result.value.review_reason ? 'needs_review' : 'pending',
 				approved_by: null,
 				source: 'manual',
 			})

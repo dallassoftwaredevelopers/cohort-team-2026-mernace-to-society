@@ -60,6 +60,11 @@ function getVendorName(bill) {
   return bill.vendor_account?.vendor?.name ?? bill.extracted_vendor_name ?? "—";
 }
 
+function formatBillStatus(status) {
+  if (status === "needs_review") return "Needs Review";
+  return status;
+}
+
 function ApprovalsPage() {
   const [activeTab, setActiveTab] = useState("Pending");
   const [bills, setBills] = useState([]);
@@ -102,23 +107,19 @@ function ApprovalsPage() {
 
   const filteredBills = useMemo(() => {
     if (activeTab === "Needs Review") {
-      return bills.filter(
-        (bill) => bill.status === "pending" && Boolean(bill.review_reason),
-      );
+      return bills.filter((bill) => bill.status === "needs_review");
     }
     if (activeTab === "Pending") {
-      return bills.filter(
-        (bill) => bill.status === "pending" && !bill.review_reason,
-      );
+      return bills.filter((bill) => bill.status === "pending");
     }
     return bills.filter((bill) => bill.status === activeTab.toLowerCase());
   }, [activeTab, bills]);
 
   const summaryCards = useMemo(() => {
-    const pendingBills = bills.filter((bill) => bill.status === "pending");
-    const reviewBills = pendingBills.filter((bill) =>
-      Boolean(bill.review_reason),
+    const pendingBills = bills.filter((bill) =>
+      ["pending", "needs_review"].includes(bill.status),
     );
+    const reviewBills = bills.filter((bill) => bill.status === "needs_review");
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
@@ -357,7 +358,7 @@ function ApprovalsPage() {
                   </td>
                   <td className={`${stackedCellClassName} capitalize`}>
                     <MobileLabel>Status</MobileLabel>
-                    {bill.status}
+                    {formatBillStatus(bill.status)}
                   </td>
                   <td className="block pt-3 md:table-cell md:px-3 md:py-3">
                     <div className="flex gap-2">
@@ -368,7 +369,8 @@ function ApprovalsPage() {
                       >
                         View
                       </button>
-                      {bill.status === "pending" && canApprove && (
+                      {["pending", "needs_review"].includes(bill.status) &&
+                        canApprove && (
                         <>
                           <button
                             type="button"
