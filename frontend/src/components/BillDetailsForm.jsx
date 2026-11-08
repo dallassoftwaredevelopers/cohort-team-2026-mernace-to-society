@@ -9,6 +9,7 @@ const initialFormData = {
 	amount: '',
 	invoiceDate: '',
 	dueDate: '',
+	comments: '',
 	approver: '',
 };
 
@@ -25,6 +26,7 @@ function billToFormData(bill) {
 		amount: bill.amount == null ? '' : String(bill.amount),
 		invoiceDate: bill.issue_date ?? '',
 		dueDate: bill.due_date ?? '',
+		comments: bill.review_reason ?? '',
 	};
 }
 
@@ -116,6 +118,7 @@ function BillDetailsForm({ bill, initialValues, onSaved, onCancel }) {
 				issue_date: formData.invoiceDate,
 				due_date: formData.dueDate,
 				vendor_account_id: formData.vendorAccount,
+				review_reason: formData.comments,
 			};
 
 			const { data, error } = isEditing
@@ -288,6 +291,28 @@ function BillDetailsForm({ bill, initialValues, onSaved, onCancel }) {
 						required
 					/>
 				</div>
+			</div>
+
+			<div>
+				<label
+					htmlFor="comments"
+					className="mb-1 block text-sm font-medium text-gray-700"
+				>
+					Comments <span className="font-normal text-gray-500">(optional)</span>
+				</label>
+				<textarea
+					id="comments"
+					name="comments"
+					value={formData.comments}
+					onChange={handleChange}
+					rows={4}
+					maxLength={2000}
+					placeholder="Add a comment about this bill"
+					className={inputClassName}
+				/>
+				<p className="mt-1 text-right text-xs text-gray-500">
+					{formData.comments.length}/2000
+				</p>
 			</div>
 
 			{/* Hidden for now: approved_by is set when someone actually approves the bill,
