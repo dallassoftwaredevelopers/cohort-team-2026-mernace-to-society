@@ -487,3 +487,8 @@ entrypoint = "./functions/update-vendor/index.js"
 enabled = true
 verify_jwt = true
 entrypoint = "./functions/extract-bill/index.js"
+
+[functions.match-bill]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/match-bill/index.js"

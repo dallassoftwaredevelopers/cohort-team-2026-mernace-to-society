@@ -32,7 +32,14 @@ function billToFormData(bill) {
 
 // Pass `bill` to edit an existing pending bill; leave it out to create a new one.
 // onSaved runs after a successful edit; onCancel shows a Cancel button.
-function BillDetailsForm({ bill, initialValues, onSaved, onCancel }) {
+// source: 'upload' when the bill came from the Upload Bill page; only used when creating
+function BillDetailsForm({
+	bill,
+	initialValues,
+	source = 'manual',
+	onSaved,
+	onCancel,
+}) {
 	const isEditing = Boolean(bill);
 	const [formData, setFormData] = useState(() => {
 		const startingValues = bill ?? initialValues;
@@ -127,7 +134,7 @@ function BillDetailsForm({ bill, initialValues, onSaved, onCancel }) {
 						body: { id: bill.id, ...billFields },
 					})
 				: await supabase.functions.invoke('create-bill', {
-						body: billFields,
+						body: { ...billFields, source },
 					});
 
 			if (error) {
