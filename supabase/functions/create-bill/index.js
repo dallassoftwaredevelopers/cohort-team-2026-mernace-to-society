@@ -50,7 +50,10 @@ export default {
 				created_by: user.id,
 				status: 'pending',
 				approved_by: null,
-				source: 'manual',
+				// A label for approvers only, so the body may set it, but only to a known value.
+				// Handled here, not in validateBill, because update-bill saves everything
+				// validateBill returns and would reset uploaded bills to 'manual' on edit.
+				source: body.source === 'upload' ? 'upload' : 'manual',
 			})
 			.select()
 			.single();

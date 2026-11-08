@@ -98,7 +98,11 @@ function UploadBillPage() {
 					{/* Hidden while the AI reads, so the form isn't built with empty values.
 					    A new key per upload makes React rebuild it with the new values. */}
 					{!isExtracting && (
-						<BillDetailsForm key={uploadedPath} initialValues={extracted} />
+						<BillDetailsForm
+							key={uploadedPath}
+							initialValues={extracted}
+							source="upload"
+						/>
 					)}
 				</section>
 			</div>
