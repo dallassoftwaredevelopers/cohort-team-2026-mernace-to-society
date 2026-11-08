@@ -23,6 +23,11 @@ const stackedRowClassName =
 const stackedCellClassName =
   "flex justify-between gap-4 py-1 md:table-cell md:px-4 md:py-3";
 
+function formatBillStatus(status) {
+  if (status === "needs_review") return "Needs Review";
+  return status;
+}
+
 function BillsPage() {
   const [open, setOpen] = useState(false);
   const [bills, setBills] = useState([]);
@@ -42,7 +47,7 @@ function BillsPage() {
       const { data, error } = await supabase
         .from("bill")
         .select(
-          "id, invoice_number, issue_date, due_date, amount, status, extracted_vendor_name, property_id, vendor_account_id, property(name), vendor_account(service, vendor(name))",
+          "id, invoice_number, issue_date, due_date, amount, status, extracted_vendor_name, review_reason, property_id, vendor_account_id, property(name), vendor_account(service, vendor(name))",
         )
         .order("due_date", { ascending: true });
 
@@ -196,11 +201,11 @@ function BillsPage() {
                   </td>
                   <td className={`${stackedCellClassName} capitalize`}>
                     <span className="font-semibold md:hidden">Status</span>
-                    {bill.status}
+                    {formatBillStatus(bill.status)}
                   </td>
                   <td className="block pt-2 md:table-cell md:px-4 md:py-3">
-                    {/* Only pending bills can be edited; approved/rejected bills are locked */}
-                    {bill.status === "pending" && (
+                    {/* Pending and needs-review bills can be edited. */}
+                    {["pending", "needs_review"].includes(bill.status) && (
                       <button
                         type="button"
                         onClick={() => setEditingBill(bill)}

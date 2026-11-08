@@ -11,7 +11,7 @@ export default {
 
 		const { data, error } = await supabase
 			.from("vendor")
-			.select("id, name, aliases, status, vendor_account(service)")
+			.select("id, name, aliases, portal_url, status, vendor_account(service)")
 			.order("created_at", { ascending: false });
 
 		if (error) {

@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import VendorForm from "../components/VendorForm";
 import { useVendors } from "../hooks/useVendors";
@@ -10,7 +11,6 @@ const cards = [
   { title: "Active Vendors", value: "0", note: "0 inactive" },
 ];
 
-// service_type lives on vendor_account (electric, water, etc.)
 const serviceTypes = [
   "Electric",
   "Water",
@@ -19,7 +19,6 @@ const serviceTypes = [
   "Property Services",
 ];
 
-// keys match current MVP ERD tables
 const columns = [
   { label: "Vendor Name", key: "name", mobile: true },
   { label: "Also On Bills As", key: "aliases" },
@@ -30,15 +29,17 @@ const columns = [
 
 const hideOnMobile = (col) => (col.mobile ? "" : "hidden md:table-cell");
 
-// Renders one vendor cell; accountCount differs between service tables and Unassigned
 function renderVendorCell(col, vendor, accountCount) {
   if (col.key === "name") return vendor.name;
+
   if (col.key === "aliases") {
     return vendor.aliases && vendor.aliases.length > 0
       ? vendor.aliases.join(", ")
       : "—";
   }
+
   if (col.key === "accounts") return accountCount;
+
   if (col.key === "status") {
     return (
       <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold">
@@ -46,6 +47,7 @@ function renderVendorCell(col, vendor, accountCount) {
       </span>
     );
   }
+
   return "—";
 }
 
@@ -58,21 +60,21 @@ function VendorsPage() {
   const [formError, setFormError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [selectedVendorIds, setSelectedVendorIds] = useState(new Set());
+  const [editVendorId, setEditVendorId] = useState(null);
 
-  // Vendors with no vendor_account rows must not be silently omitted.
   const unassignedVendors = vendors.filter(
     (vendor) => !(vendor.vendor_account || []).length,
   );
 
   const allDisplayedVendors = vendors;
 
-  // Retrieve vendors when the page loads.
   useEffect(() => {
     fetchVendors().catch(() => {});
   }, [fetchVendors]);
 
   function closeVendorForm() {
     setShowVendorForm(false);
+    setEditVendorId(null);
     setFormError("");
   }
 
@@ -120,6 +122,55 @@ function VendorsPage() {
         caughtError instanceof Error
           ? caughtError.message
           : "Could not create vendor.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function editVendor(vendorData) {
+    if (!editVendorId) return;
+
+    setIsSubmitting(true);
+    setFormError("");
+    setSuccessMessage("");
+
+    try {
+      const { data, error: invokeError } =
+        await supabase.functions.invoke("update-vendor", {
+          method: "PATCH",
+          body: { ...vendorData, id: editVendorId },
+        });
+
+      if (invokeError) {
+        let serverMessage = "";
+
+        if (typeof invokeError.context?.json === "function") {
+          try {
+            const responseBody = await invokeError.context.json();
+            serverMessage = responseBody?.error || "";
+          } catch {
+            serverMessage = "";
+          }
+        }
+
+        throw new Error(
+          serverMessage || invokeError.message || "Could not update vendor.",
+        );
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      setSuccessMessage("Vendor updated successfully.");
+      closeVendorForm();
+      await fetchVendors();
+    } catch (caughtError) {
+      setFormError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Could not update vendor.",
       );
     } finally {
       setIsSubmitting(false);
@@ -203,13 +254,13 @@ function VendorsPage() {
     ),
   }));
 
-  // Shared header row: select column, data columns, mobile arrow column
   const tableHead = (
     <thead>
       <tr className="text-xs uppercase">
         <th className="w-8 px-4 py-3 font-semibold">
           <span className="sr-only">Select</span>
         </th>
+
         {columns.map((col) => (
           <th
             key={col.key}
@@ -218,6 +269,11 @@ function VendorsPage() {
             {col.label}
           </th>
         ))}
+
+        <th className="hidden px-4 py-3 font-semibold md:table-cell">
+          Actions
+        </th>
+
         <th className="w-8 md:hidden">
           <span className="sr-only">Open</span>
         </th>
@@ -237,11 +293,28 @@ function VendorsPage() {
             aria-label={`Select ${vendor.name}`}
           />
         </td>
+
         {columns.map((col) => (
           <td key={col.key} className={`px-4 py-3 ${hideOnMobile(col)}`}>
             {renderVendorCell(col, vendor, accountCount)}
           </td>
         ))}
+
+        <td className="hidden px-4 py-3 md:table-cell">
+          <button
+            type="button"
+            onClick={() => {
+              setFormError("");
+              setEditVendorId(vendor.id);
+              setShowVendorForm(true);
+            }}
+            className="cursor-pointer text-sm text-primary underline"
+            aria-label={`Edit ${vendor.name}`}
+          >
+            Edit
+          </button>
+        </td>
+
         <td className="pr-4 text-right md:hidden" aria-hidden="true">
           →
         </td>
@@ -253,6 +326,7 @@ function VendorsPage() {
     <>
       <section className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="font-serif text-2xl font-bold">Vendors</h1>
+
         <button
           type="button"
           onClick={() => {
@@ -283,7 +357,6 @@ function VendorsPage() {
         </p>
       )}
 
-      {/* Search */}
       <div className="mt-6">
         <label htmlFor="vendor-search" className="sr-only">
           Search vendors
@@ -296,7 +369,6 @@ function VendorsPage() {
         />
       </div>
 
-      {/* Summary cards */}
       <section className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
         {cards.map(({ title, value, note }) => (
           <div key={title} className="card">
@@ -307,7 +379,6 @@ function VendorsPage() {
         ))}
       </section>
 
-      {/* Bulk delete */}
       <div className="mt-6 flex flex-wrap items-center gap-4">
         <button
           type="button"
@@ -321,7 +392,6 @@ function VendorsPage() {
         </button>
       </div>
 
-      {/* Vendors by service type */}
       <section className="card mt-8">
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-black pb-4">
           <h2 className="text-lg font-bold">Vendors by Service Type</h2>
@@ -352,7 +422,9 @@ function VendorsPage() {
               <div key={type} className="mt-6">
                 <div className="flex items-baseline justify-between">
                   <h3 className="font-semibold">{type}</h3>
-                  <span className="text-xs">{typeVendors.length} vendors</span>
+                  <span className="text-xs">
+                    {typeVendors.length} vendors
+                  </span>
                 </div>
 
                 <table className="mt-2 w-full rounded-lg bg-white text-left text-sm">
@@ -361,7 +433,7 @@ function VendorsPage() {
                     {typeVendors.length === 0 ? (
                       <tr className="border-t border-section">
                         <td
-                          colSpan={columns.length + 2}
+                          colSpan={columns.length + 3}
                           className="px-4 py-3 text-gray-600"
                         >
                           No vendors for this service type.
@@ -412,7 +484,13 @@ function VendorsPage() {
           isSubmitting={isSubmitting}
           error={formError}
           onCancel={closeVendorForm}
-          onSubmit={handleCreateVendor}
+          onSubmit={editVendorId ? editVendor : handleCreateVendor}
+          editMode={!!editVendorId}
+          vendorData={
+            editVendorId
+              ? vendors.find((vendor) => vendor.id === editVendorId)
+              : null
+          }
         />
       )}
     </>

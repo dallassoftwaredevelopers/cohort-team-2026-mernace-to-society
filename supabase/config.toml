@@ -478,6 +478,11 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/update-bill/index.js"
 
+[functions.update-vendor]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/update-vendor/index.js"
+
 [functions.extract-bill]
 enabled = true
 verify_jwt = true

@@ -44,14 +44,18 @@ export default {
 			);
 		}
 
-		// Only pending bills can be edited. Filtering on status here means a bill
-		// that was approved/rejected after the page loaded is left untouched.
+		// Only bills awaiting review can be edited. Filtering on status here means
+		// an approved/rejected bill is left untouched if the page loaded earlier.
 		// status, approved_by, created_by and source are never taken from the body.
 		const { data, error } = await supabase
 			.from('bill')
-			.update({ ...result.value, property_id: account.property_id })
+			.update({
+				...result.value,
+				property_id: account.property_id,
+				status: result.value.review_reason ? 'needs_review' : 'pending',
+			})
 			.eq('id', body.id)
-			.eq('status', 'pending')
+			.in('status', ['pending', 'needs_review'])
 			.select()
 			.maybeSingle();
 
