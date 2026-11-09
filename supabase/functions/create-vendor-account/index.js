@@ -1,7 +1,9 @@
 import { withSupabase } from "jsr:@supabase/server@^1";
+import { validateVendorAccount } from "../_shared/validateVendorAccount.js";
 
-const UUID_RE =
-	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Postgres error codes for the two mistakes a user can actually make here
+const UNIQUE_VIOLATION = "23505";
+const FOREIGN_KEY_VIOLATION = "23503";
 
 export default {
 	fetch: withSupabase({ auth: "user" }, async (req, { supabase }) => {
@@ -22,42 +24,15 @@ export default {
 			);
 		}
 
-		if (typeof body !== "object" || body === null || Array.isArray(body)) {
-			return Response.json(
-				{ error: "Body must be an object" },
-				{ status: 400 },
-			);
-		}
-
-		const { vendor_id, account_number, service, property_id } = body;
-		if (typeof vendor_id !== "string" || !UUID_RE.test(vendor_id)) {
-			return Response.json(
-				{ error: "Vendor ID is required and must be a valid UUID" },
-				{ status: 400 },
-			);
-		}
-
-		if (
-			typeof account_number !== "string" ||
-			account_number.trim().length === 0 ||
-			typeof service !== "string" ||
-			service.trim().length === 0 ||
-			typeof property_id !== "string" ||
-			!UUID_RE.test(property_id)
-		) {
-			return Response.json(
-				{
-					error:
-						"Account number, service, and a valid property ID are required",
-				},
-				{ status: 400 },
-			);
+		const result = validateVendorAccount(body);
+		if (!result.ok) {
+			return Response.json({ error: result.error }, { status: 400 });
 		}
 
 		const { data: vendor, error: vendorError } = await supabase
 			.from("vendor")
 			.select("id")
-			.eq("id", vendor_id)
+			.eq("id", result.value.vendor_id)
 			.maybeSingle();
 
 		if (vendorError) {
@@ -77,14 +52,25 @@ export default {
 		const { data: account, error: accountError } = await supabase
 			.from("vendor_account")
 			.insert({
-				vendor_id,
-				account_number: account_number.trim(),
-				service: service.trim(),
-				property_id,
+				...result.value,
 				status: "active",
 			})
 			.select()
 			.single();
+
+		if (accountError?.code === UNIQUE_VIOLATION) {
+			return Response.json(
+				{ error: "This vendor already has an account with that number" },
+				{ status: 409 },
+			);
+		}
+
+		if (accountError?.code === FOREIGN_KEY_VIOLATION) {
+			return Response.json(
+				{ error: "Vendor or property not found" },
+				{ status: 400 },
+			);
+		}
 
 		if (accountError) {
 			return Response.json(
