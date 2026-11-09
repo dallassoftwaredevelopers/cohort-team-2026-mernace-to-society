@@ -5,7 +5,13 @@ const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Fields that the client is allowed to edit on a vendor record
-const EDITABLE_FIELDS = ["name", "aliases", "portal_url"];
+const EDITABLE_FIELDS = [
+	"name",
+	"aliases",
+	"portal_url",
+	"email",
+	"phone_number",
+];
 
 export default {
 	fetch: withSupabase({ auth: "user" }, async (req, { supabase }) => {
@@ -93,6 +99,12 @@ export default {
 		}
 		if (providedEditableFields.includes("portal_url")) {
 			updates.portal_url = result.value.portal_url;
+		}
+		if (providedEditableFields.includes("email")) {
+			updates.email = result.value.email;
+		}
+		if (providedEditableFields.includes("phone_number")) {
+			updates.phone_number = result.value.phone_number;
 		}
 
 		// Security: explicitly ensure server-controlled fields are NOT updated

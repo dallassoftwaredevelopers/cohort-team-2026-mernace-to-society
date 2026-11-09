@@ -3,8 +3,17 @@ export function validateVendor(body) {
     return { ok: false, error: "Body must be an object" };
   }
 
-  // Only name, aliases and portal_url are read. status is set by the server, id/created_at by the DB.
-  const { name, aliases, portal_url, email, phone_number } = body;
+  // status is set by the server, id/created_at by the DB.
+  const {
+    name,
+    aliases,
+    portal_url,
+    email,
+    phone_number,
+    account_number,
+    service,
+    property_id,
+  } = body;
 
   if (typeof name !== "string" || name.trim().length === 0) {
     return { ok: false, error: "Name is required" };
@@ -14,39 +23,39 @@ export function validateVendor(body) {
   }
 
   //email is optional
- if (email !== undefined && email !== null && email !== "") {
-   const trimmedEmail = email.trim();
+  if (email !== undefined && email !== null && email !== "") {
+    if (typeof email !== "string") {
+      return { ok: false, error: "Please enter a valid email address" };
+    }
 
-   if (
-     typeof email !== "string" ||
-     !trimmedEmail.includes("@") ||
-     !trimmedEmail.includes(".") ||
-     trimmedEmail.startsWith("@") ||
-     trimmedEmail.endsWith("@") ||
-     trimmedEmail.includes(" ")
-   ) {
-     return { ok: false, error: "Please enter a valid email address" };
-   }
- }
+    const trimmedEmail = email.trim();
+    if (
+      !trimmedEmail.includes("@") ||
+      !trimmedEmail.includes(".") ||
+      trimmedEmail.startsWith("@") ||
+      trimmedEmail.endsWith("@") ||
+      trimmedEmail.includes(" ")
+    ) {
+      return { ok: false, error: "Please enter a valid email address" };
+    }
+  }
 
   //phone number is optional
- if (
-   phone_number !== undefined &&
-   phone_number !== null &&
-   phone_number !== ""
- ) {
-   const trimmedPhone = phone_number.trim();
+  if (
+    phone_number !== undefined &&
+    phone_number !== null &&
+    phone_number !== ""
+  ) {
+    if (typeof phone_number !== "string") {
+      return { ok: false, error: "Please enter a valid phone number" };
+    }
 
-   const digits = trimmedPhone.replace(/\D/g, "");
-
-   if (
-     typeof phone_number !== "string" ||
-     digits.length < 7 ||
-     digits.length > 15
-   ) {
-     return { ok: false, error: "Please enter a valid phone number" };
-   }
- }
+    const trimmedPhone = phone_number.trim();
+    const digits = trimmedPhone.replace(/\D/g, "");
+    if (digits.length < 7 || digits.length > 15) {
+      return { ok: false, error: "Please enter a valid phone number" };
+    }
+  }
 
   // aliases are optional alternate spellings, e.g. "ConEd" for "Consolidated Edison"
   const list = aliases === undefined || aliases === null ? [] : aliases;
@@ -94,14 +103,46 @@ export function validateVendor(body) {
     url = parsed.href;
   }
 
+  const hasAccountInformation = [account_number, service, property_id].some(
+    (value) => value !== undefined && value !== null && value !== "",
+  );
+  let account = null;
+
+  if (hasAccountInformation) {
+    if (
+      typeof account_number !== "string" ||
+      account_number.trim().length === 0 ||
+      typeof service !== "string" ||
+      service.trim().length === 0 ||
+      typeof property_id !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        property_id,
+      )
+    ) {
+      return {
+        ok: false,
+        error:
+          "Account number, service type, and property are all required to create a vendor account",
+      };
+    }
+
+    account = {
+      account_number: account_number.trim(),
+      service: service.trim(),
+      property_id,
+    };
+  }
+
   return {
     ok: true,
-    value: { 
+    value: {
       name: name.trim(),
-      aliases: cleaned, 
-      portal_url: url, 
-      email:email?.trim() || null, 
-      phone_number:phone_number?.trim() || null,
+      aliases: cleaned,
+      portal_url: url,
+      email: typeof email === "string" ? email.trim() || null : null,
+      phone_number:
+        typeof phone_number === "string" ? phone_number.trim() || null : null,
+      account,
     },
   };
 }
