@@ -26,6 +26,9 @@ function VendorForm({
   // Starting values read from a bill: { name, account_number }. Either can be missing.
   initialValues = null,
 }) {
+  // A form opened from a bill exists to create the account, so it isn't optional there
+  const accountRequired = addAccountMode || Boolean(initialValues);
+
   const {
     properties,
     loading: propertiesLoading,
@@ -214,7 +217,7 @@ function VendorForm({
           {(!editMode || addAccountMode) && (
             <fieldset className="space-y-4 rounded-lg border border-secondary p-4">
               <legend className="px-1 text-sm font-semibold">
-                Account Information{addAccountMode ? "" : " (Optional)"}
+                Account Information{accountRequired ? "" : " (Optional)"}
               </legend>
 
               <div>
@@ -228,7 +231,7 @@ function VendorForm({
                   value={formData.account_number}
                   onChange={handleChange}
                   className={inputClassName}
-                  required={addAccountMode}
+                  required={accountRequired}
                 />
               </div>
 
@@ -244,7 +247,7 @@ function VendorForm({
                   onChange={handleChange}
                   className={inputClassName}
                   placeholder="Electric"
-                  required={addAccountMode}
+                  required={accountRequired}
                 />
               </div>
 
@@ -259,12 +262,12 @@ function VendorForm({
                   onChange={handleChange}
                   className={inputClassName}
                   disabled={propertiesLoading}
-                  required={addAccountMode}
+                  required={accountRequired}
                 >
                   <option value="">
                     {propertiesLoading
                       ? "Loading properties..."
-                      : addAccountMode
+                      : accountRequired
                         ? "Select a property"
                         : "Select a property (optional)"}
                   </option>
@@ -289,7 +292,7 @@ function VendorForm({
               </div>
 
               <p className="text-xs text-gray-600">
-                {addAccountMode
+                {accountRequired
                   ? "Account number, service type, and property are required."
                   : "To create an account, provide the account number, service type, and property."}
               </p>
