@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useProperties } from "../hooks/useProperties";
 
 const emptyVendor = {
   name: "",
   aliases: "",
   portal_url: "",
-  // email: "",
-  // phone_number: "",
-  // category: "",
+  email: "",
+  phone_number: "",
+  account_number: "",
+  service: "",
+  property_id: "",
 };
 
 const inputClassName =
@@ -18,19 +21,38 @@ function VendorForm({
   onCancel,
   onSubmit,
   editMode = false,
+  addAccountMode = false,
   vendorData = null,
 }) {
-  // When editing, prefill form with existing vendor data; otherwise use empty state
+  const {
+    properties,
+    loading: propertiesLoading,
+    error: propertiesError,
+    fetchProperties,
+  } = useProperties();
+
   const [formData, setFormData] = useState(() => {
-    if (editMode && vendorData) {
+    if ((editMode || addAccountMode) && vendorData) {
       return {
         name: vendorData.name || "",
-        aliases: vendorData.aliases || "",
+        aliases:
+          addAccountMode && Array.isArray(vendorData.aliases)
+            ? vendorData.aliases.join(", ")
+            : vendorData.aliases || "",
         portal_url: vendorData.portal_url || "",
+        email: vendorData.email || "",
+        phone_number: vendorData.phone_number || "",
+        account_number: "",
+        service: "",
+        property_id: "",
       };
     }
     return emptyVendor;
   });
+
+  useEffect(() => {
+    fetchProperties().catch(() => {});
+  }, [fetchProperties]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -39,23 +61,39 @@ function VendorForm({
 
   async function handleSubmit(event) {
     event.preventDefault();
-    
-const aliases = Array.isArray(formData.aliases)
-  ? formData.aliases
-  : (formData.aliases || "")
-      .split(/[\n,]/)
-      .map((alias) => alias.trim())
-      .filter(Boolean);
 
-    await onSubmit({
+    if (addAccountMode) {
+      await onSubmit({
+        account_number: formData.account_number.trim(),
+        service: formData.service.trim(),
+        property_id: formData.property_id,
+      });
+      return;
+    }
+
+    const aliases = Array.isArray(formData.aliases)
+      ? formData.aliases
+      : (formData.aliases || "")
+          .split(/[\n,]/)
+          .map((alias) => alias.trim())
+          .filter(Boolean);
+
+    const vendorPayload = {
       name: formData.name.trim(),
       aliases,
       portal_url: formData.portal_url.trim() || null,
-      // email: formData.email.trim() || null,
-      // phone_number: formData.phone_number.trim() || null,
-      // category: formData.category,
+      email: formData.email.trim() || null,
+      phone_number: formData.phone_number.trim() || null,
       status: "active",
-    });
+    };
+
+    if (!editMode) {
+      vendorPayload.account_number = formData.account_number.trim() || null;
+      vendorPayload.service = formData.service.trim() || null;
+      vendorPayload.property_id = formData.property_id || null;
+    }
+
+    await onSubmit(vendorPayload);
   }
 
   return (
@@ -63,7 +101,11 @@ const aliases = Array.isArray(formData.aliases)
       <div className="my-auto w-full max-w-2xl rounded-xl bg-white p-4 shadow-xl sm:p-6">
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-xl font-bold">
-            {editMode ? "Update Vendor" : "Add Vendor"}
+            {addAccountMode
+              ? "Add Vendor Account"
+              : editMode
+                ? "Update Vendor"
+                : "Add Vendor"}
           </h2>
           <button
             type="button"
@@ -87,10 +129,11 @@ const aliases = Array.isArray(formData.aliases)
               type="text"
               value={formData.name}
               onChange={handleChange}
+              readOnly={addAccountMode}
               className={inputClassName}
               placeholder="Florida Power & Light"
               maxLength={100}
-              required
+              required={!addAccountMode}
             />
           </div>
 
@@ -103,6 +146,7 @@ const aliases = Array.isArray(formData.aliases)
               name="aliases"
               value={formData.aliases}
               onChange={handleChange}
+              readOnly={addAccountMode}
               className={inputClassName}
               placeholder={"FPL\nFlorida Power"}
               rows={3}
@@ -112,76 +156,139 @@ const aliases = Array.isArray(formData.aliases)
             </p>
           </div>
 
-          {/* <div className="grid grid-cols-1 gap-4 sm:grid-cols-2"> */}
-            <div>
-            <div>
-              <label htmlFor="vendor-portal-url" className="mb-1 block text-sm font-medium">
-                Portal URL
-              </label>
-              <input
-                id="vendor-portal-url"
-                name="portal_url"
-                type="url"
-                value={formData.portal_url}
-                onChange={handleChange}
-                className={inputClassName}
-                placeholder="https://example.com"
-                maxLength={2048}
-              />
-            </div>
-
-            {/* <div>
-              <label htmlFor="vendor-category" className="mb-1 block text-sm font-medium">
-                Category
-              </label>
-              <select
-                id="vendor-category"
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                className={inputClassName}
-                required
-              >
-                <option value="" disabled>
-                  Select category
-                </option>
-                <option value="utilities">Utilities</option>
-                <option value="maintenance">Maintenance</option>
-                <option value="insurance">Insurance</option>
-                <option value="internet_telecom">Internet & Telecom</option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="vendor-email" className="mb-1 block text-sm font-medium">
-                Email
-              </label>
-              <input
-                id="vendor-email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                className={inputClassName}
-                placeholder="billing@example.com"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="vendor-phone" className="mb-1 block text-sm font-medium">
-                Phone Number
-              </label>
-              <input
-                id="vendor-phone"
-                name="phone_number"
-                type="tel"
-                value={formData.phone_number}
-                onChange={handleChange}
-                className={inputClassName}
-                placeholder="(555) 555-5555"
-              />
-            </div> */}
+          <div>
+            <label htmlFor="vendor-portal-url" className="mb-1 block text-sm font-medium">
+              Portal URL
+            </label>
+            <input
+              id="vendor-portal-url"
+              name="portal_url"
+              type="url"
+              value={formData.portal_url}
+              onChange={handleChange}
+              readOnly={addAccountMode}
+              className={inputClassName}
+              placeholder="https://example.com"
+              maxLength={2048}
+            />
           </div>
+
+          <div>
+            <label htmlFor="vendor-email" className="mb-1 block text-sm font-medium">
+              Email
+            </label>
+            <input
+              id="vendor-email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              readOnly={addAccountMode}
+              className={inputClassName}
+              placeholder="billing@example.com"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="vendor-phone" className="mb-1 block text-sm font-medium">
+              Phone Number
+            </label>
+            <input
+              id="vendor-phone"
+              name="phone_number"
+              type="tel"
+              value={formData.phone_number}
+              onChange={handleChange}
+              readOnly={addAccountMode}
+              className={inputClassName}
+              placeholder="(555) 555-5555"
+            />
+          </div>
+
+          {(!editMode || addAccountMode) && (
+            <fieldset className="space-y-4 rounded-lg border border-secondary p-4">
+              <legend className="px-1 text-sm font-semibold">
+                Account Information{addAccountMode ? "" : " (Optional)"}
+              </legend>
+
+              <div>
+                <label htmlFor="vendor-account-number" className="mb-1 block text-sm font-medium">
+                  Account Number
+                </label>
+                <input
+                  id="vendor-account-number"
+                  name="account_number"
+                  type="text"
+                  value={formData.account_number}
+                  onChange={handleChange}
+                  className={inputClassName}
+                  required={addAccountMode}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="vendor-service" className="mb-1 block text-sm font-medium">
+                  Service Type
+                </label>
+                <input
+                  id="vendor-service"
+                  name="service"
+                  type="text"
+                  value={formData.service}
+                  onChange={handleChange}
+                  className={inputClassName}
+                  placeholder="Electric"
+                  required={addAccountMode}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="vendor-property" className="mb-1 block text-sm font-medium">
+                  Property
+                </label>
+                <select
+                  id="vendor-property"
+                  name="property_id"
+                  value={formData.property_id}
+                  onChange={handleChange}
+                  className={inputClassName}
+                  disabled={propertiesLoading}
+                  required={addAccountMode}
+                >
+                  <option value="">
+                    {propertiesLoading
+                      ? "Loading properties..."
+                      : addAccountMode
+                        ? "Select a property"
+                        : "Select a property (optional)"}
+                  </option>
+                  {properties.map((property) => (
+                    <option key={property.id} value={property.id}>
+                      {property.name}
+                    </option>
+                  ))}
+                </select>
+                {propertiesError && (
+                  <div className="mt-1 text-sm text-red-700">
+                    <p role="alert">Could not load properties: {propertiesError}</p>
+                    <button
+                      type="button"
+                      onClick={() => fetchProperties().catch(() => {})}
+                      className="mt-1 font-semibold underline"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <p className="text-xs text-gray-600">
+                {addAccountMode
+                  ? "Account number, service type, and property are required."
+                  : "To create an account, provide the account number, service type, and property."}
+              </p>
+            </fieldset>
+          )}
 
           {error && (
             <p role="alert" className="text-sm text-red-700">
@@ -203,7 +310,13 @@ const aliases = Array.isArray(formData.aliases)
               disabled={isSubmitting}
               className="btn-primary px-5 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? "Saving..." : editMode ? "Update Vendor" : "Create Vendor"}
+              {isSubmitting
+                ? "Saving..."
+                : addAccountMode
+                  ? "Add Account"
+                  : editMode
+                    ? "Update Vendor"
+                    : "Create Vendor"}
             </button>
           </div>
         </form>

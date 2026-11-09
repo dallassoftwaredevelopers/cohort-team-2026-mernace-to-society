@@ -9,6 +9,7 @@ import PropertiesPage from "./pages/PropertiesPage";
 import PropertyDetailsPage from "./pages/PropertyDetailsPage";
 import ManualBillIntakePage from "./pages/ManualBillIntakePage";
 import VendorsPage from "./pages/VendorsPage";
+import VendorDetailsPage from "./pages/VendorDetailsPage";
 import ApprovalsPage from "./pages/ApprovalsPage";
 import TermsOfServicePage from "./pages/TermsOfServicePage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
@@ -36,6 +37,7 @@ function App() {
           <Route path="/properties" element={<PropertiesPage />} />
           <Route path="/properties/:propertyId" element={<PropertyDetailsPage />}/>
           <Route path="/vendors" element={<VendorsPage />} />
+          <Route path="/vendors/:vendorId" element={<VendorDetailsPage />} />
           <Route path="/approvals" element={<ApprovalsPage />} />
           <Route path="/settings" element={<AccountSettingsPage />} />
           {/* Dev-only page for calling edge functions directly */}
