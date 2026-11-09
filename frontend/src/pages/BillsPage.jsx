@@ -187,7 +187,13 @@ function BillsPage() {
                 <tr key={bill.id} className={stackedRowClassName}>
                   <td className={stackedCellClassName}>
                     <span className="font-semibold md:hidden">Invoice #</span>
-                    {bill.invoice_number ?? "—"}
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/bills/${bill.id}`)}
+                      className="text-left font-semibold text-primary hover:text-primary-hover hover:underline"
+                    >
+                      {bill.invoice_number ?? "—"}
+                    </button>
                   </td>
                   <td className={stackedCellClassName}>
                     <span className="font-semibold md:hidden">Property</span>

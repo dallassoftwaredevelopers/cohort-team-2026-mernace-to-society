@@ -10,6 +10,7 @@ const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const BillsPage = lazy(() => import("./pages/BillsPage"));
+const BillDetailsPage = lazy(() => import("./pages/BillDetailsPage"));
 const UploadBillPage = lazy(() => import("./pages/UploadBillPage"));
 const ManualBillIntakePage = lazy(() => import("./pages/ManualBillIntakePage"));
 const PropertiesPage = lazy(() => import("./pages/PropertiesPage"));
@@ -44,6 +45,7 @@ function App() {
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/bills" element={<BillsPage />} />
+            <Route path="/bills/:billId" element={<BillDetailsPage />} />
             <Route path="/bills/upload" element={<UploadBillPage />} />
             <Route path="/bills/manual" element={<ManualBillIntakePage />} />
             <Route path="/properties" element={<PropertiesPage />} />
