@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { supabase } from "../../utils/supabase";
 
 const tabs = ["Profile", "Organization", "Payment Methods", "Team & Roles"];
 
@@ -13,8 +14,9 @@ const profileFields = [
 ];
 
 const passwordFields = [
-  { label: "New Password", id: "new_password" },
-  { label: "Confirm New Password", id: "confirm_password" },
+  { label: "Current Password", id: "current_password", autoComplete: "current-password", placeholder: "Enter your current password"},
+  { label: "New Password", id: "new_password", autoComplete: "new-password", placeholder: "Enter a new password"},
+  { label: "Confirm New Password", id: "confirm_new_password", autoComplete: "new-password", placeholder: "Re-enter your new password"},
 ];
 
 // ---------- Organization ----------
@@ -92,6 +94,64 @@ const hideOnMobile = (col) => (col.mobile ? "" : "hidden md:table-cell");
 function AccountSettingsPage() {
   const [activeTab, setActiveTab] = useState("Profile");
   const [methodType, setMethodType] = useState("ach");
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [passwords, setPasswords] = useState({
+    current_password: "",
+    new_password: "",
+    confirm_new_password: "",
+  });
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  async function handleUpdatePassword(e) {
+    e.preventDefault(); // stops page from reloading while entering information
+    setPasswordError("");
+    setPasswordSuccess("");
+    setIsUpdating(true);
+  
+    // 1. Gets the logged-in user's email
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // 2. Checks the "current password" entry by trying to sign in with it
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: passwords.current_password,
+    })
+
+    // 3. If "current password" entry fail "sign in" attempt with supabase
+    if (signInError) {
+      setPasswordError(
+        "Current password entry is incorrect. Please try again."
+      );
+      setIsUpdating(false);
+      return; // This stops the error messages so it only shows this and we haven't checked whether the new password and confirm new password fields match
+    }
+
+    // 4. Now compare New Password and Confirm New Password" and flag an error if they don't match
+    if (passwords.new_password !== passwords.confirm_new_password) {
+      setPasswordError(
+        "New password and Confirm new password fields do not match. Please try again."
+      );
+      setIsUpdating(false);
+      return;
+    }
+
+    // 5. If current password works and new pass & confirm new pass match the password is updated
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: passwords.new_password,
+      current_password: passwords.current_password,
+    });
+
+    if (updateError) {
+      setPasswordError(updateError.message);
+    } else {
+      setPasswordSuccess("Your password has been updated.");
+      setPasswords({ current_password: "", new_password: "", confirm_new_password: ""});
+    }
+
+    setIsUpdating(false);
+  }
 
   return (
     <>
@@ -163,35 +223,73 @@ function AccountSettingsPage() {
             </form>
           </section>
 
+          {/* Password */}
           <section className="card mt-8">
             <h2 className="border-b border-black pb-4 text-lg font-bold">
-              Change Password
+              Password
             </h2>
-
-            <form onSubmit={(e) => e.preventDefault()} className="mt-4">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {passwordFields.map(({ label, id }) => (
-                  <div key={id}>
-                    <label htmlFor={id} className="text-sm font-semibold">
-                      {label}
-                    </label>
-                    <input
-                      id={id}
-                      type="password"
-                      autoComplete="new-password"
-                      className={inputClass}
-                    />
+            <button
+              type="button"
+              onClick={() => setShowPasswordForm(!showPasswordForm)}
+              aria-expanded={showPasswordForm}
+              aria-controls="password-form"
+              className="btn-secondary mt-4 px-5 py-3 text-sm"
+            >
+              Change password
+            </button>
+            <div
+              id="password-form"
+              className={`grid transition-all duration-300 ease-in-out ${
+                showPasswordForm ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+              }`}
+              inert={!showPasswordForm}
+            >
+              <div className="overflow-hidden">
+                <form onSubmit={handleUpdatePassword} className="mt-4">
+                  <div className="grid grid-cols-1 gap-4 md:w-1/2">
+                    {passwordFields.map(({ label, id, autoComplete, placeholder }) => (
+                      <div key={id}>
+                        <label htmlFor={id} className="text-sm font-semibold">
+                          {label}
+                        </label>
+                        <input
+                          id={id}
+                          type="password"
+                          autoComplete={autoComplete}
+                          placeholder={placeholder}
+                          value={passwords[id]}
+                          onChange={(e) =>
+                            setPasswords({...passwords, [id]: e.target.value})
+                          }
+                          required
+                          className={inputClass}
+                        />
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
 
-              <button
-                type="submit"
-                className="btn-primary mt-6 px-5 py-3 text-sm"
-              >
-                Update Password
-              </button>
-            </form>
+                  {passwordError && (
+                    <p role="alert" className="mt-4 text-sm text-red-600">
+                      {passwordError}
+                    </p>
+                  )}
+
+                  {passwordSuccess && (
+                    <p role="status" className="mt-4 text-sm text-green-700">
+                      {passwordSuccess}
+                    </p>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isUpdating}
+                    className="btn-primary mt-6 px-5 py-3 text-sm disabled:opacity-50"
+                  >
+                    {isUpdating ? "Updating..." : "Update password"}
+                  </button>
+                </form>
+              </div>
+            </div>
           </section>
         </>
       )}
@@ -313,7 +411,7 @@ function AccountSettingsPage() {
                   {methodTypes.map(({ label, key }) => (
                     <label
                       key={key}
-                      className={`flex cursor-pointer items-center gap-2 rounded-lg border bg-white px-4 py-3 text-sm ${
+                      className={`flex items-center gap-2 rounded-lg border bg-white px-4 py-3 text-sm ${
                         methodType === key
                           ? "border-primary"
                           : "border-secondary"
