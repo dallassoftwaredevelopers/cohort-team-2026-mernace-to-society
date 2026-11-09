@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AppLayout from "./components/AppLayout";
+import RequireAuth from "./components/RequireAuth";
 import LandingPage from "./pages/LandingPage";
 
 // The landing page loads right away; every other page loads only when it's opened
@@ -42,7 +43,7 @@ function App() {
           <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
 
           {/* Logged-in pages share the sidebar + footer layout */}
-          <Route element={<AppLayout />}>
+          <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/bills" element={<BillsPage />} />
             <Route path="/bills/:billId" element={<BillDetailsPage />} />
