@@ -1,5 +1,10 @@
 import { useState } from "react";
 import { supabase } from "../../utils/supabase";
+import {
+  formatRole,
+  getInitials,
+  useUserProfile,
+} from "../hooks/useUserProfile";
 
 const tabs = ["Profile", "Organization", "Payment Methods", "Team & Roles"];
 
@@ -8,11 +13,6 @@ const inputClass =
 
 // ---------- Profile ----------
 // Supabase `user` table: name, email, role; password is handled by Supabase Auth
-const profileFields = [
-  { label: "Full Name", id: "name", type: "text" },
-  { label: "Email", id: "email", type: "email" },
-];
-
 const passwordFields = [
   { label: "Current Password", id: "current_password", autoComplete: "current-password", placeholder: "Enter your current password"},
   { label: "New Password", id: "new_password", autoComplete: "new-password", placeholder: "Enter a new password"},
@@ -92,6 +92,8 @@ const roleDescriptions = [
 const hideOnMobile = (col) => (col.mobile ? "" : "hidden md:table-cell");
 
 function AccountSettingsPage() {
+  const { authUser, profile, isLoading: isProfileLoading, error: profileError, updateProfileName } =
+    useUserProfile();
   const [activeTab, setActiveTab] = useState("Profile");
   const [methodType, setMethodType] = useState("ach");
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -103,6 +105,36 @@ function AccountSettingsPage() {
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [name, setName] = useState(null);
+  const [profileErrorMessage, setProfileErrorMessage] = useState("");
+  const [profileSuccessMessage, setProfileSuccessMessage] = useState("");
+
+  const displayedName = profile?.name ?? "";
+  const initials = getInitials(displayedName, authUser?.email);
+
+  async function handleSaveProfile(event) {
+    event.preventDefault();
+    setProfileErrorMessage("");
+    setProfileSuccessMessage("");
+    const trimmedName = (name ?? profile?.name ?? "").trim();
+    if (!trimmedName) {
+      setProfileErrorMessage("Enter your full name.");
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      await updateProfileName(trimmedName);
+      setName(null);
+      setProfileSuccessMessage("Your profile has been updated.");
+    } catch (error) {
+      setProfileErrorMessage(
+        error instanceof Error ? error.message : "Could not update your profile.",
+      );
+    } finally {
+      setIsUpdating(false);
+    }
+  }
 
   async function handleUpdatePassword(e) {
     e.preventDefault(); // stops page from reloading while entering information
@@ -189,36 +221,93 @@ function AccountSettingsPage() {
               Profile
             </h2>
 
-            <form onSubmit={(e) => e.preventDefault()} className="mt-4">
+            <form onSubmit={handleSaveProfile} className="mt-4">
               <div className="flex items-center gap-4">
                 <div
                   className="flex h-14 w-14 items-center justify-center rounded-full bg-sidebar text-lg font-bold text-white"
                   aria-hidden="true"
                 >
-                  RS
+                  {initials}
                 </div>
                 <div>
-                  <p className="font-semibold">Robert Smith</p>
-                  <p className="text-sm capitalize">admin</p>
+                  <p className="font-semibold">
+                    {displayedName || authUser?.email || "Account"}
+                  </p>
+                  <p className="text-sm">{formatRole(profile?.role)}</p>
                 </div>
               </div>
 
+              {profileError && (
+                <p role="alert" className="mt-4 text-sm text-red-700">
+                  {profileError}
+                </p>
+              )}
+              {profileErrorMessage && (
+                <p role="alert" className="mt-4 text-sm text-red-700">
+                  {profileErrorMessage}
+                </p>
+              )}
+              {profileSuccessMessage && (
+                <p role="status" className="mt-4 text-sm text-green-700">
+                  {profileSuccessMessage}
+                </p>
+              )}
+
               <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-                {profileFields.map(({ label, id, type }) => (
-                  <div key={id}>
-                    <label htmlFor={id} className="text-sm font-semibold">
-                      {label}
-                    </label>
-                    <input id={id} type={type} className={inputClass} />
-                  </div>
-                ))}
+                <div>
+                  <label htmlFor="name" className="text-sm font-semibold">
+                    Full Name
+                  </label>
+                  <input
+                    id="name"
+                    type="text"
+                    value={name ?? profile?.name ?? ""}
+                    onChange={(event) => {
+                      setName(event.target.value);
+                      setProfileErrorMessage("");
+                      setProfileSuccessMessage("");
+                    }}
+                    disabled={isProfileLoading || !profile}
+                    required
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="email" className="text-sm font-semibold">
+                    Email
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={authUser?.email ?? profile?.email ?? ""}
+                    readOnly
+                    className={`${inputClass} bg-gray-100`}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="role" className="text-sm font-semibold">
+                    Role
+                  </label>
+                  <input
+                    id="role"
+                    type="text"
+                    value={formatRole(profile?.role)}
+                    readOnly
+                    className={`${inputClass} bg-gray-100`}
+                    aria-describedby="role-help"
+                  />
+                  <p id="role-help" className="mt-1 text-xs text-gray-600">
+                    Your role is managed by your organization administrator.
+                  </p>
+                </div>
               </div>
 
               <button
                 type="submit"
-                className="btn-primary mt-6 px-5 py-3 text-sm"
+                disabled={isProfileLoading || !profile || isUpdating}
+                className="btn-primary mt-6 px-5 py-3 text-sm disabled:opacity-50"
               >
-                Save Profile
+                {isUpdating ? "Saving..." : "Save Profile"}
               </button>
             </form>
           </section>

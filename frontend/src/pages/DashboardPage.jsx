@@ -4,6 +4,7 @@ import { useProperties } from "../hooks/useProperties";
 import { supabase } from "../../utils/supabase";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useUserProfile } from "../hooks/useUserProfile";
 
 const cards = [
   { title: "Bills to Review", value: "0" },
@@ -30,6 +31,7 @@ function DashboardPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const { createProperty } = useProperties();
   const navigate = useNavigate();
+  const { profile, authUser } = useUserProfile();
 
   // Wraps the Add Bill button and its menu, so we can tell inside clicks from outside ones
   const dropdownRef = useRef(null);
@@ -116,7 +118,7 @@ function DashboardPage() {
       <section className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-serif text-2xl font-bold">
-            Welcome Back, Robert
+            Welcome Back, {profile?.name || authUser?.email || "there"}
           </h1>
           <p className="mt-2 text-sm">
             Review pending property bills, track expenses, and record payments.
