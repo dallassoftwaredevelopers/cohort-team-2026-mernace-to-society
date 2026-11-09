@@ -23,6 +23,8 @@ function VendorForm({
   editMode = false,
   addAccountMode = false,
   vendorData = null,
+  // Starting values read from a bill: { name, account_number }. Either can be missing.
+  initialValues = null,
 }) {
   const {
     properties,
@@ -42,12 +44,16 @@ function VendorForm({
         portal_url: vendorData.portal_url || "",
         email: vendorData.email || "",
         phone_number: vendorData.phone_number || "",
-        account_number: "",
+        account_number: initialValues?.account_number || "",
         service: "",
         property_id: "",
       };
     }
-    return emptyVendor;
+    return {
+      ...emptyVendor,
+      name: initialValues?.name || "",
+      account_number: initialValues?.account_number || "",
+    };
   });
 
   useEffect(() => {
