@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../../utils/supabase";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import mainSplash from "../assets/billioMain.png";
 
 const LoginPage = () => {
@@ -11,6 +11,7 @@ const LoginPage = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const inputClassName =
   "w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
@@ -57,7 +58,13 @@ const LoginPage = () => {
       return;
     }
 
-    navigate("/dashboard");
+    const destination = location.state?.from;
+    navigate(
+      destination
+        ? `${destination.pathname}${destination.search ?? ""}${destination.hash ?? ""}`
+        : "/dashboard",
+      { replace: true },
+    );
   }
 
   function handleToggleMode() {
