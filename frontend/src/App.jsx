@@ -4,6 +4,7 @@ import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import BillsPage from "./pages/BillsPage";
+import BillDetailsPage from "./pages/BillDetailsPage";
 import UploadBillPage from "./pages/UploadBillPage";
 import PropertiesPage from "./pages/PropertiesPage";
 import PropertyDetailsPage from "./pages/PropertyDetailsPage";
@@ -30,6 +31,7 @@ function App() {
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/bills" element={<BillsPage />} />
+          <Route path="/bills/:billId" element={<BillDetailsPage />} />
           <Route path="/bills/upload" element={<UploadBillPage />} />
           <Route path="/bills/manual" element={<ManualBillIntakePage />} />
           {/* <Route path="/billintake" element={<BillIntakePage />} /> */}
