@@ -4,7 +4,7 @@ import { supabase } from "../../utils/supabase";
 // TEMPORARY: dev page for testing bill extraction (extract-bill edge function).
 // The test login can be deleted once the real LoginPage exists.
 const TEST_EMAIL = "test@example.com";
-const TEST_PASSWORD = "password123";
+const TEST_PASSWORD = "Password123$"; //updated because the update password functionality in the settings page works! huzzah!
 
 function FunctionTestPage() {
   const [user, setUser] = useState(null);
