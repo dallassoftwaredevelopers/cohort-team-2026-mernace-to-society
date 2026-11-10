@@ -35,6 +35,13 @@ const BILL_SCHEMA = {
 		amount: { type: ['number', 'null'], description: 'Total amount due' },
 		issue_date: { type: ['string', 'null'], description: 'YYYY-MM-DD' },
 		due_date: { type: ['string', 'null'], description: 'YYYY-MM-DD' },
+		// Who is billed, e.g. "HarborLite Design Co." Only a suggestion for a new
+		// property's name; never used to match or assign a bill.
+		customer_name: {
+			type: ['string', 'null'],
+			description:
+				'The customer, account holder or location name being billed, not the vendor',
+		},
 		// Same field names as PropertyForm, so it can pre-fill a new property.
 		// Always an object (strict mode); unknown parts are null.
 		service_address: {
@@ -71,6 +78,7 @@ const BILL_SCHEMA = {
 		'amount',
 		'issue_date',
 		'due_date',
+		'customer_name',
 		'service_address',
 		'line_items',
 	],
