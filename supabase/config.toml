@@ -506,3 +506,8 @@ entrypoint = "./functions/extract-bill/index.js"
 enabled = true
 verify_jwt = true
 entrypoint = "./functions/match-bill/index.js"
+
+[functions.process-bill]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/process-bill/index.js"
