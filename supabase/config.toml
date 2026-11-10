@@ -435,6 +435,9 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/create-property/index.js"
 
+[functions.organization-settings]
+verify_jwt = true
+
 [functions.read-properties]
 enabled = true
 verify_jwt = true

@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { supabase } from "../../utils/supabase";
 
@@ -15,6 +14,7 @@ export function UserProfileProvider({ children }) {
     let isMounted = true;
 
     async function loadProfile(user) {
+      // Ignore older requests if an auth event starts a newer profile load.
       const currentRequestId = ++requestId.current;
       if (!isMounted) return;
       setAuthUser(user);
@@ -28,6 +28,7 @@ export function UserProfileProvider({ children }) {
 
       setIsLoading(true);
       try {
+        // The database function scopes the result to auth.uid().
         const { data, error: profileError } = await supabase.rpc(
           "get_current_user_profile",
         );
@@ -77,9 +78,11 @@ export function UserProfileProvider({ children }) {
       setIsLoading(false);
     });
 
+    // Load on mount and refresh the profile when the auth session changes.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Defer the request so it runs after Supabase finishes its auth callback.
       setTimeout(() => {
         if (isMounted) void loadProfile(session?.user ?? null);
       }, 0);
@@ -87,6 +90,7 @@ export function UserProfileProvider({ children }) {
 
     return () => {
       isMounted = false;
+      // Prevent callbacks after unmount.
       subscription.unsubscribe();
     };
   }, []);
@@ -96,6 +100,7 @@ export function UserProfileProvider({ children }) {
       throw new Error("Your profile is not available to update.");
     }
 
+    // The database function updates only the signed-in user's name.
     const { data, error: updateError } = await supabase.rpc(
       "update_current_user_name",
       { p_name: name },
@@ -129,6 +134,7 @@ export function UserProfileProvider({ children }) {
 export function useUserProfile() {
   const context = useContext(UserProfileContext);
   if (!context) {
+    // Fail loudly when a consumer is rendered outside the shared provider.
     throw new Error("useUserProfile must be used within UserProfileProvider.");
   }
   return context;
