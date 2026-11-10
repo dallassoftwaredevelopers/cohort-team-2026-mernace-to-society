@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { supabase } from "../../utils/supabase";
+import billioLogo from "../assets/billio-dark.png";
 
 const navigationItems = [
   { to: "/dashboard", label: "Dashboard" },
@@ -70,7 +71,9 @@ function Sidebar() {
             <path d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <span className="text-lg font-bold text-white">Billio</span>
+        <Link to="/dashboard" className="flex items-center">
+          <img src={billioLogo} alt="Billio dashboard" className="h-8 w-auto" />
+        </Link>
         <span
           className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-avatar text-xs font-semibold text-sidebar"
           aria-hidden="true"
@@ -96,7 +99,17 @@ function Sidebar() {
         } md:static md:min-h-screen md:shrink-0 md:translate-x-0`}
       >
         <div className="mb-10 flex items-center justify-between">
-          <p className="text-2xl font-bold text-white">Billio</p>
+          <Link
+            to="/dashboard"
+            onClick={closeMenu}
+            className="flex items-center"
+          >
+            <img
+              src={billioLogo}
+              alt="Billio dashboard"
+              className="h-10 w-auto"
+            />
+          </Link>
           <button
             type="button"
             onClick={closeMenu}
