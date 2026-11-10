@@ -11,6 +11,12 @@ const tabs = ["Profile", "Organization", "Payment Methods", "Team & Roles"];
 const inputClass =
   "mt-1 w-full rounded-lg border border-secondary bg-white px-4 py-3 text-sm";
 
+// Edge Function errors include the server response body with the user-facing message.
+async function getFunctionError(error, fallback) {
+  const responseBody = await error?.context?.json?.().catch(() => null);
+  return new Error(responseBody?.error ?? error?.message ?? fallback);
+}
+
 // Password changes use Supabase Auth; name and role are stored in the app profile.
 const passwordFields = [
   { label: "Current Password", id: "current_password", autoComplete: "current-password", placeholder: "Enter your current password"},
@@ -116,7 +122,6 @@ function AccountSettingsPage() {
     org_zip: "",
     org_phone: "",
   });
-  const [organizationId, setOrganizationId] = useState(null);
   const [isLoadingOrganization, setIsLoadingOrganization] = useState(false);
   const [isSavingOrganization, setIsSavingOrganization] = useState(false);
   const [organizationError, setOrganizationError] = useState("");
@@ -137,23 +142,24 @@ function AccountSettingsPage() {
       setOrganizationSuccess("");
 
       try {
-        const { data, error } = await supabase
-          .from("organization")
-          .select("id, name, street, city, state, zip, phone")
-          .maybeSingle();
+        const { data, error } = await supabase.functions.invoke(
+          "organization-settings",
+          { method: "GET" },
+        );
         if (error) {
-          throw error;
+          throw await getFunctionError(
+            error,
+            "Could not load organization settings.",
+          );
         }
 
-        const currentOrganization = data;
+        const currentOrganization = data?.data;
         if (!currentOrganization) {
           throw new Error(
             "Your account is not linked to an organization. Contact an administrator.",
           );
         }
-
         if (isMounted) {
-          setOrganizationId(currentOrganization.id);
           setOrganization({
             org_name: currentOrganization.name ?? "",
             org_street: currentOrganization.street ?? "",
@@ -213,14 +219,9 @@ function AccountSettingsPage() {
     setOrganizationError("");
     setOrganizationSuccess("");
 
-    // This is a UI guard; the database RLS policy also enforces admin permission.
+    // This is a UI guard; the Edge Function/database also enforce admin permission.
     if (!isOrganizationAdmin) {
       setOrganizationError("Only organization admins can update these details.");
-      return;
-    }
-
-    if (!organizationId) {
-      setOrganizationError("Load your organization details before saving.");
       return;
     }
 
@@ -232,26 +233,30 @@ function AccountSettingsPage() {
 
     setIsSavingOrganization(true);
     try {
-      const { data, error } = await supabase
-        .from("organization")
-        .update({
-          name,
-          street: organization.org_street.trim() || null,
-          city: organization.org_city.trim() || null,
-          state: organization.org_state.trim() || null,
-          zip: organization.org_zip.trim() || null,
-          phone: organization.org_phone.trim() || null,
-        })
-        .eq("id", organizationId)
-        .select("id, name, street, city, state, zip, phone")
-        .single();
+      const { data, error } = await supabase.functions.invoke(
+        "organization-settings",
+        {
+          method: "PATCH",
+          body: {
+            name,
+            street: organization.org_street,
+            city: organization.org_city,
+            state: organization.org_state,
+            zip: organization.org_zip,
+            phone: organization.org_phone,
+          },
+        },
+      );
       if (error) {
-        throw error;
+        throw await getFunctionError(
+          error,
+          "Could not save organization details.",
+        );
       }
 
-      const updatedOrganization = data;
+      const updatedOrganization = data?.data;
       if (!updatedOrganization) {
-        throw new Error("The database did not return the saved organization.");
+        throw new Error("The server did not return the saved organization.");
       }
 
       setOrganization({

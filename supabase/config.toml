@@ -437,6 +437,7 @@ entrypoint = "./functions/create-property/index.js"
 
 [functions.organization-settings]
 verify_jwt = true
+entrypoint = "./functions/organization-settings/index.js"
 
 [functions.read-properties]
 enabled = true
