@@ -2,7 +2,7 @@ import PropertyForm from "../components/PropertyForm";
 import VendorForm from "../components/VendorForm";
 import { useProperties } from "../hooks/useProperties";
 import { supabase } from "../../utils/supabase";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const cards = [
@@ -30,6 +30,32 @@ function DashboardPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const { createProperty } = useProperties();
   const navigate = useNavigate();
+
+  // Wraps the Add Bill button and its menu, so we can tell inside clicks from outside ones
+  const dropdownRef = useRef(null);
+
+  // Close the Add Bill menu when clicking outside it or pressing Escape
+  useEffect(() => {
+    if (!open) return;
+
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+
+    function handleEscape(event) {
+      if (event.key === "Escape") setOpen(false);
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [open]);
 
   function closeForm() {
     setActiveForm("");
@@ -98,7 +124,7 @@ function DashboardPage() {
         </div>
 
         <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:gap-3">
-          <div className="relative">
+          <div className="relative" ref={dropdownRef}>
             <button
               type="button"
               onClick={() => setOpen(!open)}
@@ -114,6 +140,7 @@ function DashboardPage() {
                 ].map(({ label, path }) => (
                   <button
                     key={label}
+                    type="button"
                     onClick={() => {
                       setOpen(false);
                       navigate(path);

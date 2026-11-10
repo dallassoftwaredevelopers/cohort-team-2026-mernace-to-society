@@ -8,14 +8,29 @@ const valid = {
 };
 
 Deno.test('accepts a valid vendor', () => {
-	assertEquals(validateVendor(valid), { ok: true, value: valid });
+	assertEquals(validateVendor(valid), {
+		ok: true,
+		value: {
+			...valid,
+			email: null,
+			phone_number: null,
+			account: null,
+		},
+	});
 });
 
 Deno.test('only name is required', () => {
 	const result = validateVendor({ name: 'ConEd' });
 	assertEquals(result, {
 		ok: true,
-		value: { name: 'ConEd', aliases: [], portal_url: null },
+		value: {
+			name: 'ConEd',
+			aliases: [],
+			portal_url: null,
+			email: null,
+			phone_number: null,
+			account: null,
+		},
 	});
 });
 
@@ -46,7 +61,35 @@ Deno.test('drops an alias that repeats the name', () => {
 
 Deno.test("drops fields the user shouldn't control", () => {
 	const result = validateVendor({ ...valid, status: 'inactive', id: 'abc' });
-	assertEquals(result, { ok: true, value: valid });
+	assertEquals(result, {
+		ok: true,
+		value: {
+			...valid,
+			email: null,
+			phone_number: null,
+			account: null,
+		},
+	});
+});
+
+const validAccount = {
+	account_number: '1001-2345',
+	service: 'Electric',
+	property_id: '11111111-1111-4111-8111-111111111111',
+};
+
+Deno.test('accepts complete optional account information', () => {
+	const result = validateVendor({ ...valid, ...validAccount });
+	assertEquals(result.ok, true);
+	assertEquals(result.value.account, validAccount);
+});
+
+Deno.test('rejects partial account information', () => {
+	const result = validateVendor({
+		...valid,
+		account_number: validAccount.account_number,
+	});
+	assertEquals(result.ok, false);
 });
 
 const invalidCases = [
@@ -65,6 +108,8 @@ const invalidCases = [
 	['portal_url not a url', { ...valid, portal_url: 'coned dot com' }],
 	['portal_url javascript scheme', { ...valid, portal_url: 'javascript:alert(1)' }],
 	['portal_url ftp scheme', { ...valid, portal_url: 'ftp://coned.com' }],
+	['email not a string', { ...valid, email: 123 }],
+	['phone number not a string', { ...valid, phone_number: 123 }],
 ];
 
 for (const [label, input] of invalidCases) {

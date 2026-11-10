@@ -30,7 +30,16 @@ function UploadBillPage() {
 			);
 		} else {
 			// invoke puts the response body in `data`; extract-bill's body is { data: {...} }
-			setExtracted(data.data);
+			// Then ask match-bill which vendor account this is. Its data is
+			// { vendor_account_id, property_id, complete }, or null when there isn't
+			// exactly one match. If the call fails, the dropdowns just stay blank.
+			const { data: matchData, error: matchError } =
+				await supabase.functions.invoke('match-bill', { body: data.data });
+			if (matchError) console.error('match-bill failed:', matchError);
+
+			// billToFormData reads property_id and vendor_account_id, so merging them
+			// in pre-selects both dropdowns
+			setExtracted({ ...data.data, ...(matchData?.data ?? {}) });
 		}
 		setIsExtracting(false);
 	}
@@ -89,7 +98,11 @@ function UploadBillPage() {
 					{/* Hidden while the AI reads, so the form isn't built with empty values.
 					    A new key per upload makes React rebuild it with the new values. */}
 					{!isExtracting && (
-						<BillDetailsForm key={uploadedPath} initialValues={extracted} />
+						<BillDetailsForm
+							key={uploadedPath}
+							initialValues={extracted}
+							source="upload"
+						/>
 					)}
 				</section>
 			</div>

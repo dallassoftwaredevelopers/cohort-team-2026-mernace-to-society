@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import VendorForm from "../components/VendorForm";
 import { useVendors } from "../hooks/useVendors";
 import { supabase } from "../../utils/supabase";
@@ -30,7 +31,16 @@ const columns = [
 const hideOnMobile = (col) => (col.mobile ? "" : "hidden md:table-cell");
 
 function renderVendorCell(col, vendor, accountCount) {
-  if (col.key === "name") return vendor.name;
+  if (col.key === "name") {
+    return (
+      <Link
+        to={`/vendors/${vendor.id}`}
+        className="font-semibold text-primary underline hover:no-underline"
+      >
+        {vendor.name}
+      </Link>
+    );
+  }
 
   if (col.key === "aliases") {
     return vendor.aliases && vendor.aliases.length > 0

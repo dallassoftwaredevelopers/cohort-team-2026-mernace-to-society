@@ -1,6 +1,6 @@
 import BillDetailsForm from "../components/BillDetailsForm";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../utils/supabase";
 
 const billColumns = [
@@ -42,6 +42,32 @@ function BillsPage() {
   const [sortBy, setSortBy] = useState("due_date_asc");
 
   const navigate = useNavigate();
+
+  // Wraps the Add Bill button and its menu, so we can tell inside clicks from outside ones
+  const dropdownRef = useRef(null);
+
+  // Close the Add Bill menu when clicking outside it or pressing Escape
+  useEffect(() => {
+    if (!open) return;
+
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+
+    function handleEscape(event) {
+      if (event.key === "Escape") setOpen(false);
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [open]);
 
   // Load bills and properties for filters
   useEffect(() => {
@@ -122,7 +148,7 @@ function BillsPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <div className="relative">
+          <div className="relative" ref={dropdownRef}>
             <button
               type="button"
               onClick={() => setOpen(!open)}
