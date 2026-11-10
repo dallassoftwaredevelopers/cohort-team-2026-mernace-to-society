@@ -1,26 +1,30 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../../utils/supabase";
+import {
+  formatRole,
+  getInitials,
+  useUserProfile,
+} from "../hooks/useUserProfile";
 
 const tabs = ["Profile", "Organization", "Payment Methods", "Team & Roles"];
 
 const inputClass =
   "mt-1 w-full rounded-lg border border-secondary bg-white px-4 py-3 text-sm";
 
-// ---------- Profile ----------
-// Supabase `user` table: name, email, role; password is handled by Supabase Auth
-const profileFields = [
-  { label: "Full Name", id: "name", type: "text" },
-  { label: "Email", id: "email", type: "email" },
-];
+// Edge Function errors include the server response body with the user-facing message.
+async function getFunctionError(error, fallback) {
+  const responseBody = await error?.context?.json?.().catch(() => null);
+  return new Error(responseBody?.error ?? error?.message ?? fallback);
+}
 
+// Password changes use Supabase Auth; name and role are stored in the app profile.
 const passwordFields = [
   { label: "Current Password", id: "current_password", autoComplete: "current-password", placeholder: "Enter your current password"},
   { label: "New Password", id: "new_password", autoComplete: "new-password", placeholder: "Enter a new password"},
   { label: "Confirm New Password", id: "confirm_new_password", autoComplete: "new-password", placeholder: "Re-enter your new password"},
 ];
 
-// ---------- Organization ----------
-// no organization table in Supabase yet (user, property, and bill only store org_id)
+// Organization form IDs map to the component state; request field names are mapped on save.
 const orgFields = [
   { label: "Organization Name", id: "org_name" },
   { label: "Street", id: "org_street" },
@@ -30,7 +34,7 @@ const orgFields = [
   { label: "Phone", id: "org_phone" },
 ];
 
-// ---------- Payment Methods ----------
+// Payment method UI is a placeholder until a payment_method table/processor integration exists.
 // no payment_method table in Supabase yet; type matches vendor_account.payment_type
 const paymentColumns = [
   { label: "Method", key: "nickname" },
@@ -65,7 +69,7 @@ const fieldsByType = {
   ],
 };
 
-// ---------- Team & Roles ----------
+// Team UI is a placeholder until team-member persistence and invitations are implemented.
 // Supabase `user` table; status is not a column yet (invited | active | disabled)
 const teamColumns = [
   { label: "Name", key: "name", mobile: true },
@@ -92,6 +96,10 @@ const roleDescriptions = [
 const hideOnMobile = (col) => (col.mobile ? "" : "hidden md:table-cell");
 
 function AccountSettingsPage() {
+  const { authUser, profile, isLoading: isProfileLoading, error: profileError, updateProfileName } =
+    useUserProfile();
+
+  // Each tab owns separate form state so unfinished settings don't overwrite saved profile data.
   const [activeTab, setActiveTab] = useState("Profile");
   const [methodType, setMethodType] = useState("ach");
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -103,32 +111,197 @@ function AccountSettingsPage() {
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [name, setName] = useState(null);
+  const [profileErrorMessage, setProfileErrorMessage] = useState("");
+  const [profileSuccessMessage, setProfileSuccessMessage] = useState("");
+  const [organization, setOrganization] = useState({
+    org_name: "",
+    org_street: "",
+    org_city: "",
+    org_state: "",
+    org_zip: "",
+    org_phone: "",
+  });
+  const [isLoadingOrganization, setIsLoadingOrganization] = useState(false);
+  const [isSavingOrganization, setIsSavingOrganization] = useState(false);
+  const [organizationError, setOrganizationError] = useState("");
+  const [organizationSuccess, setOrganizationSuccess] = useState("");
+
+  const displayedName = profile?.name ?? "";
+  const initials = getInitials(displayedName, authUser?.email);
+  const isOrganizationAdmin = profile?.role?.toLowerCase() === "admin";
+
+  useEffect(() => {
+    // Load organization details only when their tab is opened.
+    if (activeTab !== "Organization") return undefined;
+
+    let isMounted = true;
+    async function loadOrganization() {
+      setIsLoadingOrganization(true);
+      setOrganizationError("");
+      setOrganizationSuccess("");
+
+      try {
+        const { data, error } = await supabase.functions.invoke(
+          "organization-settings",
+          { method: "GET" },
+        );
+        if (error) {
+          throw await getFunctionError(
+            error,
+            "Could not load organization settings.",
+          );
+        }
+
+        const currentOrganization = data?.data;
+        if (!currentOrganization) {
+          throw new Error(
+            "Your account is not linked to an organization. Contact an administrator.",
+          );
+        }
+        if (isMounted) {
+          setOrganization({
+            org_name: currentOrganization.name ?? "",
+            org_street: currentOrganization.street ?? "",
+            org_city: currentOrganization.city ?? "",
+            org_state: currentOrganization.state ?? "",
+            org_zip: currentOrganization.zip ?? "",
+            org_phone: currentOrganization.phone ?? "",
+          });
+        }
+      } catch (error) {
+        if (isMounted) {
+          setOrganizationError(
+            error instanceof Error
+              ? error.message
+              : "Could not load organization settings.",
+          );
+        }
+      } finally {
+        if (isMounted) setIsLoadingOrganization(false);
+      }
+    }
+
+    void loadOrganization();
+    return () => {
+      // Avoid updating state if the user leaves the tab before the request completes.
+      isMounted = false;
+    };
+  }, [activeTab]);
+
+  async function handleSaveProfile(event) {
+    event.preventDefault();
+    setProfileErrorMessage("");
+    setProfileSuccessMessage("");
+    const trimmedName = (name ?? profile?.name ?? "").trim();
+    if (!trimmedName) {
+      setProfileErrorMessage("Enter your full name.");
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      // The provider updates shared state too, so the sidebar reflects the saved name immediately.
+      await updateProfileName(trimmedName);
+      setName(null);
+      setProfileSuccessMessage("Your profile has been updated.");
+    } catch (error) {
+      setProfileErrorMessage(
+        error instanceof Error ? error.message : "Could not update your profile.",
+      );
+    } finally {
+      setIsUpdating(false);
+    }
+  }
+
+  async function handleSaveOrganization(event) {
+    event.preventDefault();
+    setOrganizationError("");
+    setOrganizationSuccess("");
+
+    // This is a UI guard; the Edge Function/database also enforce admin permission.
+    if (!isOrganizationAdmin) {
+      setOrganizationError("Only organization admins can update these details.");
+      return;
+    }
+
+    const name = organization.org_name.trim();
+    if (!name) {
+      setOrganizationError("Organization name is required.");
+      return;
+    }
+
+    setIsSavingOrganization(true);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "organization-settings",
+        {
+          method: "PATCH",
+          body: {
+            name,
+            street: organization.org_street,
+            city: organization.org_city,
+            state: organization.org_state,
+            zip: organization.org_zip,
+            phone: organization.org_phone,
+          },
+        },
+      );
+      if (error) {
+        throw await getFunctionError(
+          error,
+          "Could not save organization details.",
+        );
+      }
+
+      const updatedOrganization = data?.data;
+      if (!updatedOrganization) {
+        throw new Error("The server did not return the saved organization.");
+      }
+
+      setOrganization({
+        org_name: updatedOrganization.name ?? "",
+        org_street: updatedOrganization.street ?? "",
+        org_city: updatedOrganization.city ?? "",
+        org_state: updatedOrganization.state ?? "",
+        org_zip: updatedOrganization.zip ?? "",
+        org_phone: updatedOrganization.phone ?? "",
+      });
+      setOrganizationSuccess("Organization details saved.");
+    } catch (error) {
+      setOrganizationError(
+        error instanceof Error
+          ? error.message
+          : "Could not save organization details.",
+      );
+    } finally {
+      setIsSavingOrganization(false);
+    }
+  }
 
   async function handleUpdatePassword(e) {
-    e.preventDefault(); // stops page from reloading while entering information
+    e.preventDefault();
     setPasswordError("");
     setPasswordSuccess("");
     setIsUpdating(true);
   
-    // 1. Gets the logged-in user's email
+    // Re-authenticate with the current password before accepting a new one.
     const { data: { user } } = await supabase.auth.getUser();
 
-    // 2. Checks the "current password" entry by trying to sign in with it
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: user.email,
       password: passwords.current_password,
     })
 
-    // 3. If "current password" entry fail "sign in" attempt with supabase
     if (signInError) {
       setPasswordError(
         "Current password entry is incorrect. Please try again."
       );
       setIsUpdating(false);
-      return; // This stops the error messages so it only shows this and we haven't checked whether the new password and confirm new password fields match
+      return;
     }
 
-    // 4. Now compare New Password and Confirm New Password" and flag an error if they don't match
+    // Don't update Auth credentials unless both new-password fields agree.
     if (passwords.new_password !== passwords.confirm_new_password) {
       setPasswordError(
         "New password and Confirm new password fields do not match. Please try again."
@@ -137,7 +310,6 @@ function AccountSettingsPage() {
       return;
     }
 
-    // 5. If current password works and new pass & confirm new pass match the password is updated
     const { error: updateError } = await supabase.auth.updateUser({
       password: passwords.new_password,
       current_password: passwords.current_password,
@@ -162,7 +334,7 @@ function AccountSettingsPage() {
         </p>
       </section>
 
-      {/* Settings tabs */}
+      {/* Only the selected tab's form is rendered. */}
       <nav
         aria-label="Account settings sections"
         className="mt-6 flex flex-wrap gap-2 border-b border-secondary pb-4"
@@ -181,7 +353,7 @@ function AccountSettingsPage() {
         ))}
       </nav>
 
-      {/* Profile */}
+      {/* Profile: name can be changed here; email and role are display-only. */}
       {activeTab === "Profile" && (
         <>
           <section className="card mt-8">
@@ -189,41 +361,98 @@ function AccountSettingsPage() {
               Profile
             </h2>
 
-            <form onSubmit={(e) => e.preventDefault()} className="mt-4">
+            <form onSubmit={handleSaveProfile} className="mt-4">
               <div className="flex items-center gap-4">
                 <div
                   className="flex h-14 w-14 items-center justify-center rounded-full bg-sidebar text-lg font-bold text-white"
                   aria-hidden="true"
                 >
-                  RS
+                  {initials}
                 </div>
                 <div>
-                  <p className="font-semibold">Robert Smith</p>
-                  <p className="text-sm capitalize">admin</p>
+                  <p className="font-semibold">
+                    {displayedName || authUser?.email || "Account"}
+                  </p>
+                  <p className="text-sm">{formatRole(profile?.role)}</p>
                 </div>
               </div>
 
+              {profileError && (
+                <p role="alert" className="mt-4 text-sm text-red-700">
+                  {profileError}
+                </p>
+              )}
+              {profileErrorMessage && (
+                <p role="alert" className="mt-4 text-sm text-red-700">
+                  {profileErrorMessage}
+                </p>
+              )}
+              {profileSuccessMessage && (
+                <p role="status" className="mt-4 text-sm text-green-700">
+                  {profileSuccessMessage}
+                </p>
+              )}
+
               <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-                {profileFields.map(({ label, id, type }) => (
-                  <div key={id}>
-                    <label htmlFor={id} className="text-sm font-semibold">
-                      {label}
-                    </label>
-                    <input id={id} type={type} className={inputClass} />
-                  </div>
-                ))}
+                <div>
+                  <label htmlFor="name" className="text-sm font-semibold">
+                    Full Name
+                  </label>
+                  <input
+                    id="name"
+                    type="text"
+                    value={name ?? profile?.name ?? ""}
+                    onChange={(event) => {
+                      setName(event.target.value);
+                      setProfileErrorMessage("");
+                      setProfileSuccessMessage("");
+                    }}
+                    disabled={isProfileLoading || !profile}
+                    required
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="email" className="text-sm font-semibold">
+                    Email
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={authUser?.email ?? profile?.email ?? ""}
+                    readOnly
+                    className={`${inputClass} bg-gray-100`}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="role" className="text-sm font-semibold">
+                    Role
+                  </label>
+                  <input
+                    id="role"
+                    type="text"
+                    value={formatRole(profile?.role)}
+                    readOnly
+                    className={`${inputClass} bg-gray-100`}
+                    aria-describedby="role-help"
+                  />
+                  <p id="role-help" className="mt-1 text-xs text-gray-600">
+                    Your role is managed by your organization administrator.
+                  </p>
+                </div>
               </div>
 
               <button
                 type="submit"
-                className="btn-primary mt-6 px-5 py-3 text-sm"
+                disabled={isProfileLoading || !profile || isUpdating}
+                className="btn-primary mt-6 px-5 py-3 text-sm disabled:opacity-50"
               >
-                Save Profile
+                {isUpdating ? "Saving..." : "Save Profile"}
               </button>
             </form>
           </section>
 
-          {/* Password */}
+          {/* Password: managed by Supabase Auth, separate from the app profile row. */}
           <section className="card mt-8">
             <h2 className="border-b border-black pb-4 text-lg font-bold">
               Password
@@ -294,36 +523,72 @@ function AccountSettingsPage() {
         </>
       )}
 
-      {/* Organization */}
+      {/* Organization: loaded and saved through the organization-settings Edge Function. */}
       {activeTab === "Organization" && (
         <section className="card mt-8">
           <h2 className="border-b border-black pb-4 text-lg font-bold">
             Organization
           </h2>
 
-          <form onSubmit={(e) => e.preventDefault()} className="mt-4">
+          <form onSubmit={handleSaveOrganization} className="mt-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {orgFields.map(({ label, id }) => (
                 <div key={id}>
                   <label htmlFor={id} className="text-sm font-semibold">
                     {label}
                   </label>
-                  <input id={id} type="text" className={inputClass} />
+                  <input
+                    id={id}
+                    type="text"
+                    value={organization[id]}
+                    onChange={(event) => {
+                      setOrganization((current) => ({
+                        ...current,
+                        [id]: event.target.value,
+                      }));
+                      setOrganizationError("");
+                      setOrganizationSuccess("");
+                    }}
+                    disabled={isLoadingOrganization || !isOrganizationAdmin}
+                    required={id === "org_name"}
+                    className={inputClass}
+                  />
                 </div>
               ))}
             </div>
 
+            {!isOrganizationAdmin && (
+              <p className="mt-4 text-sm text-gray-600">
+                Only organization admins can edit these details.
+              </p>
+            )}
+            {organizationError && (
+              <p role="alert" className="mt-4 text-sm text-red-700">
+                {organizationError}
+              </p>
+            )}
+            {organizationSuccess && (
+              <p role="status" className="mt-4 text-sm text-green-700">
+                {organizationSuccess}
+              </p>
+            )}
+
             <button
               type="submit"
-              className="btn-primary mt-6 px-5 py-3 text-sm"
+              disabled={
+                isLoadingOrganization ||
+                isSavingOrganization ||
+                !isOrganizationAdmin
+              }
+              className="btn-primary mt-6 px-5 py-3 text-sm disabled:opacity-50"
             >
-              Save Organization
+              {isSavingOrganization ? "Saving..." : "Save Organization"}
             </button>
           </form>
         </section>
       )}
 
-      {/* Payment Methods */}
+      {/* Payment Methods: presentation-only until persistence is implemented. */}
       {activeTab === "Payment Methods" && (
         <>
           {/* Payment methods list — stacks into cards below md */}
@@ -462,7 +727,7 @@ function AccountSettingsPage() {
         </>
       )}
 
-      {/* Team & Roles */}
+      {/* Team & Roles: role descriptions are informational; member management is not wired yet. */}
       {activeTab === "Team & Roles" && (
         <>
           <section className="card mt-8">
