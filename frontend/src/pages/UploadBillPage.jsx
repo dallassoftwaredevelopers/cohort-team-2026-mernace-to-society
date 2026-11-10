@@ -18,9 +18,8 @@ async function callFunction(name, body) {
 }
 
 // Asks match-bill which vendor account this bill belongs to. Returns
-// { vendor_account_id, property_id, complete } for a match, { vendor_id } when
-// there's no account (vendor_id is null for an unknown vendor), or null when
-// several accounts match or the call fails, so the person picks from the dropdowns.
+// { vendor_account_id, property_id, complete } for a match, or null when there's
+// no single match or the call fails, so the person picks from the dropdowns.
 async function findMatch(bill) {
 	try {
 		const result = await callFunction('match-bill', bill);
@@ -31,12 +30,24 @@ async function findMatch(bill) {
 	}
 }
 
+function formatMoney(amount) {
+	return amount == null
+		? '—'
+		: Number(amount).toLocaleString('en-US', {
+				style: 'currency',
+				currency: 'USD',
+			});
+}
+
 function UploadBillPage() {
-	const [uploadedPath, setUploadedPath] = useState('');
-	const [extracted, setExtracted] = useState(null);
-	const [match, setMatch] = useState(null);
-	const [isExtracting, setIsExtracting] = useState(false);
-	const [extractError, setExtractError] = useState('');
+	// The bill process-bill saved: pending, needs_review or extraction_failed
+	const [bill, setBill] = useState(null);
+	// Set when there's no account but we recognized the vendor (for Add Account)
+	const [vendorId, setVendorId] = useState(null);
+	const [isProcessing, setIsProcessing] = useState(false);
+	const [processError, setProcessError] = useState('');
+	// { message, billId } when this file or invoice was already entered
+	const [duplicate, setDuplicate] = useState(null);
 
 	// Which modal is open: 'property', 'vendor', or null
 	const [openForm, setOpenForm] = useState(null);
@@ -47,44 +58,49 @@ function UploadBillPage() {
 	// Bumped after adding an account so the bill form rebuilds with the new match
 	const [formVersion, setFormVersion] = useState(0);
 
-	const noMatch = match && !match.vendor_account_id;
+	const extracted = bill?.extracted_data ?? null;
+	const needsFixing = bill && bill.status !== 'pending';
+	const noAccount =
+		bill?.status === 'needs_review' && !bill.vendor_account_id && extracted;
 
 	function resetBill() {
-		setExtracted(null);
-		setMatch(null);
-		setExtractError('');
+		setBill(null);
+		setVendorId(null);
+		setProcessError('');
+		setDuplicate(null);
 		setFormError('');
 		setNotice('');
 	}
 
-	// UploadDocument calls this once the file is in storage
+	// UploadDocument calls this once the file is in storage. process-bill reads,
+	// matches, checks and saves it in one step; nothing to submit afterwards.
 	async function handleUploaded(path) {
-		setUploadedPath(path);
 		resetBill();
-		setIsExtracting(true);
+		setIsProcessing(true);
 
-		const { data, error } = await supabase.functions.invoke('extract-bill', {
+		const { data, error } = await supabase.functions.invoke('process-bill', {
 			body: { path },
 		});
 
 		if (error) {
 			// The function's { error } message is on the response body
 			const details = await error.context?.json?.().catch(() => null);
-			setExtractError(
-				details?.error ??
-					"We couldn't read this bill. Please fill in the details below.",
-			);
+			if (error.context?.status === 409) {
+				setDuplicate({
+					message: details?.error ?? 'This bill was already uploaded.',
+					billId: details?.duplicate_bill_id ?? null,
+				});
+			} else {
+				setProcessError(
+					details?.error ?? "We couldn't process this bill. Please try again.",
+				);
+			}
 		} else {
-			// invoke puts the response body in `data`; extract-bill's body is { data: {...} }
-			setMatch(await findMatch(data.data));
-			setExtracted(data.data);
+			// invoke puts the response body in `data`: { data: bill, vendor_id }
+			setBill(data.data);
+			setVendorId(data.vendor_id ?? null);
 		}
-		setIsExtracting(false);
-	}
-
-	function handleRemoved() {
-		setUploadedPath('');
-		resetBill();
+		setIsProcessing(false);
 	}
 
 	function closeForm() {
@@ -115,21 +131,30 @@ function UploadBillPage() {
 
 	function handleSaveVendor(values) {
 		return saveFromForm(async () => {
-			if (match.vendor_id) {
+			if (vendorId) {
 				await callFunction('create-vendor-account', {
 					...values,
-					vendor_id: match.vendor_id,
+					vendor_id: vendorId,
 				});
 			} else {
 				await callFunction('create-vendor', values);
 			}
 
-			// Match on the number the person saved, in case they corrected the AI's reading
-			const bill = { ...extracted, account_number: values.account_number };
-			setMatch(await findMatch(bill));
-			setExtracted(bill);
+			// Match on the number the person saved, in case they corrected the AI's
+			// reading. This only pre-selects the dropdowns; Save sends it.
+			const match = await findMatch({
+				...extracted,
+				account_number: values.account_number,
+			});
+			if (match?.vendor_account_id) {
+				setBill((current) => ({
+					...current,
+					vendor_account_id: match.vendor_account_id,
+					property_id: match.property_id,
+				}));
+			}
 			setFormVersion((version) => version + 1);
-			setNotice('Vendor account added.');
+			setNotice('Vendor account added. Save the bill to send it for approval.');
 		});
 	}
 
@@ -138,9 +163,9 @@ function UploadBillPage() {
 		setFormError('');
 		setNotice('');
 		try {
-			if (match.vendor_id) {
+			if (vendorId) {
 				const { vendor } = await callFunction('read-vendor-details', {
-					vendorId: match.vendor_id,
+					vendorId,
 				});
 				setExistingVendor(vendor);
 			}
@@ -149,6 +174,25 @@ function UploadBillPage() {
 			setFormError(err.message);
 		}
 	}
+
+	// After a fix is saved, update-bill moves the bill to pending
+	function handleBillSaved(saved) {
+		setBill(saved);
+		setNotice('');
+	}
+
+	// Pre-fills Add Property from what the AI read. The name is a suggestion:
+	// who's billed, else the street. Active, since the property is getting bills.
+	// The form's inputs need strings, so anything unread becomes ''.
+	const address = extracted?.service_address;
+	const propertyFromBill = {
+		name: extracted?.customer_name || address?.street || '',
+		status: 'active',
+		street: address?.street ?? '',
+		city: address?.city ?? '',
+		state: address?.state ?? '',
+		zip: address?.zip ?? '',
+	};
 
 	const vendorLabel = extracted?.vendor_name || 'this vendor';
 	const accountLabel = extracted?.account_number
@@ -161,8 +205,8 @@ function UploadBillPage() {
 				<div>
 					<h1 className="font-serif text-2xl font-bold">Upload a bill</h1>
 					<p className="mt-2 text-sm text-gray-600">
-						Upload a bill document or image, then review and complete its
-						details.
+						We'll read the bill, match it to a vendor account and send it for
+						approval. If anything is missing, you can fix it here.
 					</p>
 				</div>
 				<Link to="/bills" className="btn-secondary px-4 py-2 text-sm">
@@ -177,27 +221,85 @@ function UploadBillPage() {
 						Upload your bill or invoice (PDF, JPG, or PNG).
 					</p>
 
-					<UploadDocument
-						onUploaded={handleUploaded}
-						onRemoved={handleRemoved}
-					/>
+					<UploadDocument onUploaded={handleUploaded} onRemoved={resetBill} />
 				</section>
 
 				<section className="card">
 					<h2 className="text-lg font-bold">Bill details</h2>
-					<p className="mt-1 text-sm text-gray-600">
-						Review or complete the bill details associated with this file.
-					</p>
 
-					{isExtracting && (
-						<p role="status" className="mt-4 text-sm text-gray-600">
-							Reading bill...
+					{!bill && !isProcessing && !processError && !duplicate && (
+						<p className="mt-1 text-sm text-gray-600">
+							Upload a file to get started.
 						</p>
 					)}
-					{extractError && (
-						<p role="alert" className="mt-4 text-sm text-red-700">
-							{extractError}
+
+					{isProcessing && (
+						<p role="status" className="mt-4 text-sm text-gray-600">
+							Reading and saving bill...
 						</p>
+					)}
+
+					{processError && (
+						<p role="alert" className="mt-4 text-sm text-red-700">
+							{processError}
+						</p>
+					)}
+
+					{duplicate && (
+						<div role="alert" className="mt-4 rounded-lg border border-red-300 p-4">
+							<p className="text-sm font-semibold text-red-700">
+								{duplicate.message}
+							</p>
+							<p className="mt-1 text-sm text-gray-600">
+								Nothing new was saved.{' '}
+								{duplicate.billId && (
+									<Link
+										to={`/bills/${duplicate.billId}`}
+										className="font-semibold underline"
+									>
+										View the existing bill
+									</Link>
+								)}
+							</p>
+						</div>
+					)}
+
+					{bill?.status === 'pending' && (
+						<div role="status" className="mt-4 rounded-lg border border-green-600 p-4">
+							<p className="text-sm font-semibold text-green-800">
+								Sent for approval
+							</p>
+							<p className="mt-1 text-sm text-gray-700">
+								{[
+									extracted?.vendor_name,
+									bill.invoice_number && `Invoice ${bill.invoice_number}`,
+									formatMoney(bill.amount),
+									bill.due_date && `due ${bill.due_date}`,
+								]
+									.filter(Boolean)
+									.join(' · ')}
+							</p>
+							<Link
+								to={`/bills/${bill.id}`}
+								className="mt-3 inline-block text-sm font-semibold underline"
+							>
+								View bill
+							</Link>
+						</div>
+					)}
+
+					{needsFixing && (
+						<div role="status" className="mt-4 rounded-lg border border-secondary p-4">
+							<p className="text-sm font-semibold">
+								{bill.status === 'extraction_failed'
+									? "Saved, but we couldn't read it"
+									: 'Saved, but it needs a review'}
+							</p>
+							<p className="mt-1 text-sm text-gray-700">{bill.review_reason}</p>
+							<p className="mt-1 text-sm text-gray-600">
+								Fix the details below and save to send it for approval.
+							</p>
+						</div>
 					)}
 
 					{notice && (
@@ -207,10 +309,10 @@ function UploadBillPage() {
 					)}
 
 					{/* Buttons, not an automatic popup: the AI may have misread the number */}
-					{noMatch && (
+					{noAccount && (
 						<div className="mt-4 rounded-lg border border-secondary p-4">
 							<p className="text-sm font-semibold">
-								{match.vendor_id
+								{vendorId
 									? `We found ${vendorLabel}, but no matching account${accountLabel}.`
 									: `We couldn't find ${vendorLabel}${accountLabel} in your vendors.`}
 							</p>
@@ -245,13 +347,14 @@ function UploadBillPage() {
 						</div>
 					)}
 
-					{/* Hidden while the AI reads, so the form isn't built with empty values.
-					    A new key makes React rebuild it with the new values. */}
-					{!isExtracting && (
+					{/* Edits the saved bill through update-bill. review_reason is cleared
+					    so fixing the bill sends it on; it's shown above instead. Typing a
+					    comment keeps it in needs_review. A new key rebuilds the form. */}
+					{needsFixing && (
 						<BillDetailsForm
-							key={`${uploadedPath}-${formVersion}`}
-							initialValues={extracted && { ...extracted, ...match }}
-							source="upload"
+							key={`${bill.id}-${formVersion}`}
+							bill={{ ...bill, review_reason: null }}
+							onSaved={handleBillSaved}
 						/>
 					)}
 				</section>
@@ -259,6 +362,7 @@ function UploadBillPage() {
 
 			{openForm === 'property' && (
 				<PropertyForm
+					initialValues={propertyFromBill}
 					isSubmitting={isSaving}
 					error={formError}
 					onCancel={closeForm}
@@ -268,11 +372,11 @@ function UploadBillPage() {
 
 			{openForm === 'vendor' && (
 				<VendorForm
-					addAccountMode={Boolean(match.vendor_id)}
+					addAccountMode={Boolean(vendorId)}
 					vendorData={existingVendor}
 					initialValues={{
-						name: extracted.vendor_name,
-						account_number: extracted.account_number,
+						name: extracted?.vendor_name,
+						account_number: extracted?.account_number,
 					}}
 					isSubmitting={isSaving}
 					error={formError}
