@@ -232,11 +232,18 @@ function DashboardPage() {
               ))}
               <td className="block pt-3 md:table-cell md:px-4 md:py-4">
                 <div className="flex gap-2 md:justify-end">
-                  <button className="btn-secondary flex-1 px-4 py-2 text-xs md:flex-none">
+                  <button
+                    type="button"
+                    className="btn-secondary flex-1 px-4 py-2 text-xs md:flex-none"
+                  >
                     Review
                   </button>
-                  <button className="btn-primary flex-1 px-4 py-2 text-xs md:flex-none">
-                    Mark Paid
+                  <button
+                    type="button"
+                    // TODO: open the payment flow once payments are built
+                    className="btn-primary flex-1 px-4 py-2 text-xs md:flex-none"
+                  >
+                    Pay
                   </button>
                 </div>
               </td>
