@@ -30,6 +30,28 @@ async function findMatch(bill) {
 	}
 }
 
+// Lowercase, no punctuation, single spaces: "HarborLite Design Co." -> "harborlite design co"
+function clean(text) {
+	return (text ?? '')
+		.toLowerCase()
+		.replace(/[^a-z0-9 ]/g, ' ')
+		.replace(/\s+/g, ' ')
+		.trim();
+}
+
+// Looks for a saved property with the same name as the customer on the bill.
+// Name only: names are unique, but several properties can share a street.
+// Only a suggestion, so a failed read returns null.
+async function findExistingProperty(extracted) {
+	const name = clean(extracted?.customer_name);
+	if (!name) return null;
+
+	const { data, error } = await supabase.from('property').select('id, name');
+	if (error) return null;
+
+	return data.find((property) => clean(property.name) === name) ?? null;
+}
+
 function formatMoney(amount) {
 	return amount == null
 		? '—'
@@ -44,6 +66,8 @@ function UploadBillPage() {
 	const [bill, setBill] = useState(null);
 	// Set when there's no account but we recognized the vendor (for Add Account)
 	const [vendorId, setVendorId] = useState(null);
+	// { id, name } of a saved property this bill seems to be for, or null
+	const [knownProperty, setKnownProperty] = useState(null);
 	const [isProcessing, setIsProcessing] = useState(false);
 	const [processError, setProcessError] = useState('');
 	// { message, billId } when this file or invoice was already entered
@@ -66,6 +90,7 @@ function UploadBillPage() {
 	function resetBill() {
 		setBill(null);
 		setVendorId(null);
+		setKnownProperty(null);
 		setProcessError('');
 		setDuplicate(null);
 		setFormError('');
@@ -97,7 +122,19 @@ function UploadBillPage() {
 			}
 		} else {
 			// invoke puts the response body in `data`: { data: bill, vendor_id }
-			setBill(data.data);
+			const saved = data.data;
+
+			// No account matched, but the property may already exist. If so,
+			// pre-select it so nobody tries to add it again.
+			const known =
+				saved.status === 'needs_review' && !saved.vendor_account_id
+					? await findExistingProperty(saved.extracted_data)
+					: null;
+
+			setKnownProperty(known);
+			setBill(
+				known && !saved.property_id ? { ...saved, property_id: known.id } : saved,
+			);
 			setVendorId(data.vendor_id ?? null);
 		}
 		setIsProcessing(false);
@@ -124,8 +161,10 @@ function UploadBillPage() {
 
 	function handleSaveProperty(property) {
 		return saveFromForm(async () => {
-			await callFunction('create-property', property);
-			setNotice('Property added. Select it when you add the vendor account.');
+			const { data: created } = await callFunction('create-property', property);
+			// Pre-selects it in the vendor account form
+			setKnownProperty({ id: created.id, name: created.name });
+			setNotice('Property added. Now add the vendor account.');
 		});
 	}
 
@@ -221,7 +260,11 @@ function UploadBillPage() {
 						Upload your bill or invoice (PDF, JPG, or PNG).
 					</p>
 
-					<UploadDocument onUploaded={handleUploaded} onRemoved={resetBill} />
+					<UploadDocument
+						onUploaded={handleUploaded}
+						onRemoved={resetBill}
+						disabled={isProcessing}
+					/>
 				</section>
 
 				<section className="card">
@@ -316,21 +359,33 @@ function UploadBillPage() {
 									? `We found ${vendorLabel}, but no matching account${accountLabel}.`
 									: `We couldn't find ${vendorLabel}${accountLabel} in your vendors.`}
 							</p>
-							<p className="mt-1 text-sm text-gray-600">
-								Add what's missing, or choose from the dropdowns below.
-							</p>
+							{knownProperty ? (
+								<p className="mt-1 text-sm text-gray-600">
+									This looks like{' '}
+									<span className="font-semibold">{knownProperty.name}</span>,
+									which is already one of your properties, so it's selected for
+									you. Add the vendor account to finish.
+								</p>
+							) : (
+								<p className="mt-1 text-sm text-gray-600">
+									Add what's missing, or choose from the dropdowns below.
+								</p>
+							)}
 							<div className="mt-3 flex flex-wrap gap-2">
-								<button
-									type="button"
-									onClick={() => {
-										setFormError('');
-										setNotice('');
-										setOpenForm('property');
-									}}
-									className="btn-secondary px-4 py-2 text-sm"
-								>
-									+ Add property
-								</button>
+								{/* Hidden when the property exists: adding it again would fail */}
+								{!knownProperty && (
+									<button
+										type="button"
+										onClick={() => {
+											setFormError('');
+											setNotice('');
+											setOpenForm('property');
+										}}
+										className="btn-secondary px-4 py-2 text-sm"
+									>
+										+ Add property
+									</button>
+								)}
 								<button
 									type="button"
 									onClick={openVendorForm}
@@ -377,6 +432,7 @@ function UploadBillPage() {
 					initialValues={{
 						name: extracted?.vendor_name,
 						account_number: extracted?.account_number,
+						property_id: knownProperty?.id,
 					}}
 					isSubmitting={isSaving}
 					error={formError}
