@@ -69,8 +69,7 @@ const fieldsByType = {
   ],
 };
 
-// Team UI is a placeholder until team-member persistence and invitations are implemented.
-// Supabase `user` table; status is not a column yet (invited | active | disabled)
+// Status is managed manually in public.user until team actions are implemented.
 const teamColumns = [
   { label: "Name", key: "name", mobile: true },
   { label: "Email", key: "email" },
@@ -126,6 +125,11 @@ function AccountSettingsPage() {
   const [isSavingOrganization, setIsSavingOrganization] = useState(false);
   const [organizationError, setOrganizationError] = useState("");
   const [organizationSuccess, setOrganizationSuccess] = useState("");
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [isLoadingTeamMembers, setIsLoadingTeamMembers] = useState(false);
+  const [teamMembersError, setTeamMembersError] = useState("");
+  const [teamMemberActionError, setTeamMemberActionError] = useState("");
+  const [updatingTeamMemberId, setUpdatingTeamMemberId] = useState(null);
 
   const displayedName = profile?.name ?? "";
   const initials = getInitials(displayedName, authUser?.email);
@@ -185,6 +189,44 @@ function AccountSettingsPage() {
     void loadOrganization();
     return () => {
       // Avoid updating state if the user leaves the tab before the request completes.
+      isMounted = false;
+    };
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== "Team & Roles") return undefined;
+
+    let isMounted = true;
+    async function loadTeamMembers() {
+      setIsLoadingTeamMembers(true);
+      setTeamMembersError("");
+
+      try {
+        const { data, error } = await supabase.functions.invoke(
+          "team-members",
+          { method: "GET" },
+        );
+        if (error) {
+          throw await getFunctionError(error, "Could not load team members.");
+        }
+        if (!Array.isArray(data?.members)) {
+          throw new Error("The server returned an invalid team member list.");
+        }
+
+        if (isMounted) setTeamMembers(data.members);
+      } catch (error) {
+        if (isMounted) {
+          setTeamMembersError(
+            error instanceof Error ? error.message : "Could not load team members.",
+          );
+        }
+      } finally {
+        if (isMounted) setIsLoadingTeamMembers(false);
+      }
+    }
+
+    void loadTeamMembers();
+    return () => {
       isMounted = false;
     };
   }, [activeTab]);
@@ -276,6 +318,33 @@ function AccountSettingsPage() {
       );
     } finally {
       setIsSavingOrganization(false);
+    }
+  }
+
+  async function handleToggleTeamMemberStatus(member) {
+    const nextStatus = member.status === "active" ? "inactive" : "active";
+    setTeamMemberActionError("");
+    setUpdatingTeamMemberId(member.id);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("team-members", {
+        method: "PATCH",
+        body: { userId: member.id, status: nextStatus },
+      });
+      if (error) {
+        throw await getFunctionError(error, "Could not update member status.");
+      }
+      if (!Array.isArray(data?.members)) {
+        throw new Error("The server did not return the updated team list.");
+      }
+
+      setTeamMembers(data.members);
+    } catch (error) {
+      setTeamMemberActionError(
+        error instanceof Error ? error.message : "Could not update member status.",
+      );
+    } finally {
+      setUpdatingTeamMemberId(null);
     }
   }
 
@@ -727,7 +796,7 @@ function AccountSettingsPage() {
         </>
       )}
 
-      {/* Team & Roles: role descriptions are informational; member management is not wired yet. */}
+      {/* Team & Roles: members load from the authenticated team-members Edge Function. */}
       {activeTab === "Team & Roles" && (
         <>
           <section className="card mt-8">
@@ -737,6 +806,12 @@ function AccountSettingsPage() {
                 People in your organization and what they can do.
               </p>
             </div>
+
+            {teamMemberActionError && (
+              <p className="mt-4 text-sm text-red-700" role="alert">
+                {teamMemberActionError}
+              </p>
+            )}
 
             <table className="mt-4 w-full rounded-lg bg-white text-left text-sm">
               <thead>
@@ -749,35 +824,98 @@ function AccountSettingsPage() {
                       {col.label}
                     </th>
                   ))}
-                  <th className="px-4 py-3 text-right font-semibold">
-                    Actions
-                  </th>
+                  {isOrganizationAdmin && (
+                    <th className="px-4 py-3 text-right font-semibold">
+                      Actions
+                    </th>
+                  )}
                 </tr>
               </thead>
 
               <tbody>
-                {/* Placeholder row — replace with mapped user data later */}
-                <tr className="border-t border-section">
-                  {teamColumns.map((col) => (
+                {isLoadingTeamMembers && (
+                  <tr className="border-t border-section">
                     <td
-                      key={col.key}
-                      className={`px-4 py-3 ${hideOnMobile(col)}`}
+                      colSpan={teamColumns.length + (isOrganizationAdmin ? 1 : 0)}
+                      className="px-4 py-4 text-center"
                     >
-                      {col.key === "status" ? (
-                        <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold">
-                          Active
-                        </span>
-                      ) : (
-                        "—"
-                      )}
+                      Loading team members...
                     </td>
+                  </tr>
+                )}
+                {!isLoadingTeamMembers && teamMembersError && (
+                  <tr className="border-t border-section">
+                    <td
+                      colSpan={teamColumns.length + (isOrganizationAdmin ? 1 : 0)}
+                      className="px-4 py-4 text-center text-red-700"
+                      role="alert"
+                    >
+                      {teamMembersError}
+                    </td>
+                  </tr>
+                )}
+                {!isLoadingTeamMembers &&
+                  !teamMembersError &&
+                  teamMembers.length === 0 && (
+                    <tr className="border-t border-section">
+                      <td
+                        colSpan={teamColumns.length + (isOrganizationAdmin ? 1 : 0)}
+                        className="px-4 py-4 text-center"
+                      >
+                        No team members found.
+                      </td>
+                    </tr>
+                  )}
+                {!isLoadingTeamMembers &&
+                  !teamMembersError &&
+                  teamMembers.map((member) => (
+                    <tr key={member.id} className="border-t border-section">
+                      {teamColumns.map((col) => (
+                        <td
+                          key={col.key}
+                          className={`px-4 py-3 ${hideOnMobile(col)}`}
+                        >
+                          {col.key === "status" ? (
+                            <span
+                              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                member.status === "active"
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-secondary text-gray-700"
+                              }`}
+                            >
+                              {formatRole(member.status)}
+                            </span>
+                          ) : col.key === "role" ? (
+                            formatRole(member.role)
+                          ) : (
+                            member[col.key] || "—"
+                          )}
+                        </td>
+                      ))}
+                      {isOrganizationAdmin && (
+                        <td className="px-4 py-3 text-right">
+                          {member.id === authUser?.id ? (
+                            <span className="text-xs text-gray-500">
+                              Your account
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="btn-secondary px-3 py-2 text-xs"
+                              disabled={updatingTeamMemberId === member.id}
+                              onClick={() => handleToggleTeamMemberStatus(member)}
+                            >
+                              {updatingTeamMemberId === member.id
+                                ? "Saving..."
+                                : member.status === "active"
+                                  ? "Set inactive"
+                                  : "Set active"}
+                            </button>
+                          )}
+                        </td>
+                      )}
+                    </tr>
                   ))}
-                  <td className="px-4 py-3 text-right">
-                    <button className="btn-secondary px-4 py-2 text-xs">
-                      Edit
-                    </button>
-                  </td>
-                </tr>
               </tbody>
             </table>
           </section>
