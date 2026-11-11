@@ -7,13 +7,15 @@ const extensionsByType = {
 	'image/png': 'png',
 };
 
-function UploadDocument({ onUploaded, onRemoved }) {
+// disabled: the page is still working on the last upload (e.g. reading the bill)
+function UploadDocument({ onUploaded, onRemoved, disabled = false }) {
 	const [file, setFile] = useState(null);
 	const [isDragging, setIsDragging] = useState(false);
 	const [isUploading, setIsUploading] = useState(false);
 	const [uploadError, setUploadError] = useState('');
 	const [uploadedPath, setUploadedPath] = useState('');
 	const fileInputRef = useRef(null);
+	const busy = isUploading || disabled;
 
 	function handleFileSelection(selectedFile) {
 		if (!selectedFile) return;
@@ -29,7 +31,7 @@ function UploadDocument({ onUploaded, onRemoved }) {
 	}
 
 	async function handleUpload() {
-		if (!file || isUploading) return;
+		if (!file || busy || uploadedPath) return;
 
 		setIsUploading(true);
 		setUploadError('');
@@ -91,7 +93,7 @@ function UploadDocument({ onUploaded, onRemoved }) {
 				type="file"
 				accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
 				className="sr-only"
-				disabled={isUploading}
+				disabled={busy}
 				onChange={(event) => {
 					// Clearing the input lets the same file be selected again afterward.
 					handleFileSelection(event.target.files?.[0]);
@@ -106,13 +108,13 @@ function UploadDocument({ onUploaded, onRemoved }) {
 				}`}
 				onDragOver={(event) => {
 					event.preventDefault();
-					if (!isUploading) setIsDragging(true);
+					if (!busy) setIsDragging(true);
 				}}
 				onDragLeave={() => setIsDragging(false)}
 				onDrop={(event) => {
 					event.preventDefault();
 					setIsDragging(false);
-					if (!isUploading) handleFileSelection(event.dataTransfer.files[0]);
+					if (!busy) handleFileSelection(event.dataTransfer.files[0]);
 				}}
 			>
 				<p>
@@ -121,7 +123,7 @@ function UploadDocument({ onUploaded, onRemoved }) {
 				<p className="mt-1 text-sm text-gray-500">PDF, JPG, or PNG</p>
 				<button
 					type="button"
-					disabled={isUploading}
+					disabled={busy}
 					onClick={() => fileInputRef.current?.click()}
 					className="mt-4 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
 				>
@@ -136,7 +138,7 @@ function UploadDocument({ onUploaded, onRemoved }) {
 					</p>
 					<button
 						type="button"
-						disabled={isUploading}
+						disabled={busy}
 						onClick={removeFile}
 						className="text-sm text-red-600 hover:text-red-800 disabled:opacity-60"
 					>
@@ -145,10 +147,12 @@ function UploadDocument({ onUploaded, onRemoved }) {
 				</div>
 			)}
 
-			{file && (
+			{/* Hidden once this file is uploaded, so it can't be sent twice.
+			    Choosing another file brings it back. */}
+			{file && !uploadedPath && (
 				<button
 					type="button"
-					disabled={isUploading}
+					disabled={busy}
 					onClick={handleUpload}
 					className="btn-primary mt-4 px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
 				>

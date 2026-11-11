@@ -3,7 +3,7 @@ const UUID_RE =
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Returns an error string, or null if the value is a real YYYY-MM-DD date
-function checkDate(value, label) {
+export function checkDate(value, label) {
 	if (typeof value !== 'string' || !DATE_RE.test(value)) {
 		return `${label} must be YYYY-MM-DD`;
 	}
