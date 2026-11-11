@@ -62,7 +62,14 @@ const LoginPage = () => {
     }
 
     if (error) {
-      setErrorMessage(error.message);
+      const isBannedAccount =
+        error.code === "user_banned" ||
+        error.message?.toLowerCase().includes("banned");
+      setErrorMessage(
+        isBannedAccount
+          ? "Your account access is inactive. Contact your organization administrator for access."
+          : error.message,
+      );
       return;
     }
 
