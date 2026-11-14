@@ -1,0 +1,22 @@
+{
+	"vendor_name": "Summit Trail Equipment Rental",
+	"account_number": "2000456709",
+	"invoice_number": "BILL-1001",
+	"amount": 287.61,
+	"issue_date": "2026-10-02",
+	"due_date": "2026-10-16",
+	"customer_name": "Summit Trail Outfitters",
+	"service_address": {
+		"street": "125 Industrial Way",
+		"city": "Springfield",
+		"state": "IL",
+		"zip": "62701"
+	},
+	"portal_url": "https://summit-trail-utility-demo.vercel.app",
+	"line_items": [
+		{
+			"description": "Equipment rental - compact loader weekly hire",
+			"amount": 287.61
+		}
+	]
+}

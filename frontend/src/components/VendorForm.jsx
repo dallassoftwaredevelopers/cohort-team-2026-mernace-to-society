@@ -23,7 +23,7 @@ function VendorForm({
   editMode = false,
   addAccountMode = false,
   vendorData = null,
-  // Starting values read from a bill: { name, account_number, property_id }. Any can be missing.
+  // Starting values read from a bill: { name, account_number, portal_url, property_id }. Any can be missing.
   initialValues = null,
 }) {
   // A form opened from a bill exists to create the account, so it isn't optional there
@@ -56,6 +56,7 @@ function VendorForm({
       ...emptyVendor,
       name: initialValues?.name || "",
       account_number: initialValues?.account_number || "",
+      portal_url: initialValues?.portal_url || "",
       property_id: initialValues?.property_id || "",
     };
   });

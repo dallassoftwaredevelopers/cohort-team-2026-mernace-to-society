@@ -179,6 +179,33 @@ function UploadBillPage() {
 					)}
 				</section>
 			</div>
+
+			{openForm === 'property' && (
+				<PropertyForm
+					initialValues={propertyFromBill}
+					isSubmitting={isSaving}
+					error={formError}
+					onCancel={closeForm}
+					onSubmit={handleSaveProperty}
+				/>
+			)}
+
+			{openForm === 'vendor' && (
+				<VendorForm
+					addAccountMode={Boolean(vendorId)}
+					vendorData={existingVendor}
+					initialValues={{
+						name: extracted?.vendor_name,
+						account_number: extracted?.account_number,
+						portal_url: extracted?.portal_url,
+						property_id: knownProperty?.id,
+					}}
+					isSubmitting={isSaving}
+					error={formError}
+					onCancel={closeForm}
+					onSubmit={handleSaveVendor}
+				/>
+			)}
 		</>
 	);
 }

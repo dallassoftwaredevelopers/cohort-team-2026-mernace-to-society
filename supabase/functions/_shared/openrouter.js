@@ -12,7 +12,6 @@ const FALLBACK_MODEL = 'openai/gpt-4o-mini';
 const RETRYABLE_STATUSES = [429, 500, 502, 503, 504];
 const RETRY_DELAY_MS = 1500;
 
-// How OpenRouter turns a PDF into something the model can read:
 // 'native' = the model reads the PDF itself (needs a model that supports files)
 // 'cloudflare-ai' = OpenRouter converts it to text first, free, works with any model
 const DEFAULT_PDF_ENGINE = 'native';
@@ -24,7 +23,7 @@ export const MIME_BY_EXTENSION = {
 	png: 'image/png',
 };
 
-// The shape we ask the model to return. match-bill (DC-77) validates it for real;
+// The shape we ask the model to return. match-bill funciton validates it;
 // this schema only tells the model what to produce.
 const BILL_SCHEMA = {
 	type: 'object',
@@ -51,12 +50,19 @@ const BILL_SCHEMA = {
 			properties: {
 				street: { type: ['string', 'null'] },
 				city: { type: ['string', 'null'] },
-				state: { type: ['string', 'null'], description: '2-letter code, e.g. NY' },
-				// A string so leading zeros survive (e.g. 02134)
+				state: {
+					type: ['string', 'null'],
+					description: '2-letter code, e.g. NY',
+				},
 				zip: { type: ['string', 'null'] },
 			},
 			required: ['street', 'city', 'state', 'zip'],
 			additionalProperties: false,
+		},
+		// Pre-fills the vendor's portal_url when adding a new vendor
+		portal_url: {
+			type: ['string', 'null'],
+			description: 'The website printed on the bill for paying it online',
 		},
 		line_items: {
 			type: 'array',
@@ -80,6 +86,7 @@ const BILL_SCHEMA = {
 		'due_date',
 		'customer_name',
 		'service_address',
+		'portal_url',
 		'line_items',
 	],
 	additionalProperties: false,
@@ -99,7 +106,6 @@ export async function extractBillData({ bytes, mimeType, filename }) {
 	const pdfEngine = Deno.env.get('OPENROUTER_PDF_ENGINE') || DEFAULT_PDF_ENGINE;
 	const dataUrl = `data:${mimeType};base64,${encodeBase64(bytes)}`;
 
-	// PDFs go in a "file" part, images in an "image_url" part
 	const filePart =
 		mimeType === 'application/pdf'
 			? { type: 'file', file: { filename, file_data: dataUrl } }
@@ -108,6 +114,7 @@ export async function extractBillData({ bytes, mimeType, filename }) {
 	const requestBody = JSON.stringify({
 		// OpenRouter tries these in order if a provider fails
 		models: model === FALLBACK_MODEL ? [model] : [model, FALLBACK_MODEL],
+		temperature: 0,
 		messages: [
 			{ role: 'user', content: [{ type: 'text', text: PROMPT }, filePart] },
 		],
