@@ -31,7 +31,7 @@
     min-height: 100vh;
   }
 
-  button:not(:disabled), 
+  button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
@@ -46,5 +46,47 @@
   }
   .card {
     @apply rounded-xl bg-section p-4 md:p-6;
+  }
+
+  /* Red text button for destructive actions like Delete */
+  .btn-danger {
+    @apply rounded-lg font-semibold text-red-700 hover:bg-red-50;
+  }
+
+  /* Page headings */
+  .page-title {
+    @apply font-serif text-2xl font-bold;
+  }
+  .page-subtitle {
+    @apply mt-2 text-sm text-gray-600;
+  }
+
+  /* Card headings: .section-title for a lone h2, .section-header for a row with an h2 and buttons */
+  .section-title {
+    @apply border-b border-secondary pb-4 text-lg font-bold;
+  }
+  .section-header {
+    @apply flex flex-wrap items-center justify-between gap-3 border-b border-secondary pb-4;
+  }
+
+  /* Form fields */
+  .label {
+    @apply mb-1 block text-sm font-semibold;
+  }
+  .input {
+    @apply w-full rounded-lg border border-secondary bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-100;
+  }
+
+  /* Text links */
+  .link {
+    @apply font-semibold text-primary hover:text-primary-hover hover:underline;
+  }
+
+  /* Messages */
+  .alert-error {
+    @apply rounded-lg bg-red-50 p-4 text-sm text-red-700;
+  }
+  .alert-success {
+    @apply rounded-lg bg-green-50 p-4 text-sm text-green-700;
   }
 }
