@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../utils/supabase";
 import { useUserProfile } from "../hooks/useUserProfile";
 import { canManageRecords } from "../utils/permissions";
+import StatusBadge from "../components/StatusBadge";
+import { formatCurrency, formatDate } from "../utils/format";
 
 const billColumns = [
   "Invoice number",
@@ -20,15 +22,9 @@ const cellMessageClassName =
   "block px-4 py-12 text-center text-gray-600 md:table-cell";
 
 const stackedRowClassName =
-  "mb-4 block rounded-lg bg-white p-4 md:mb-0 md:table-row md:rounded-none md:border-t md:border-gray-200 md:bg-transparent md:p-0";
+  "mb-4 block rounded-lg bg-white p-4 md:mb-0 md:table-row md:rounded-none md:border-t md:border-secondary md:bg-transparent md:p-0";
 const stackedCellClassName =
   "flex justify-between gap-4 py-1 md:table-cell md:px-4 md:py-3";
-
-function formatBillStatus(status) {
-  if (status === "needs_review") return "Needs Review";
-  if (status === "extraction_failed") return "Couldn't Read";
-  return status;
-}
 
 function BillsPage() {
   const [open, setOpen] = useState(false);
@@ -147,8 +143,8 @@ function BillsPage() {
     <>
       <section className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-serif text-2xl font-bold">Bills</h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <h1 className="page-title">Bills</h1>
+          <p className="page-subtitle">
             {canEditRecords
               ? "View and manage bills for your properties."
               : "View bills or upload a new bill for review."}
@@ -195,17 +191,14 @@ function BillsPage() {
         <div className="flex flex-wrap items-center gap-3">
           {/* Property Filter */}
           <div>
-            <label
-              htmlFor="filter-property"
-              className="block text-xs font-medium text-gray-500 mb-1"
-            >
+            <label htmlFor="filter-property" className="label">
               Property
             </label>
             <select
               id="filter-property"
               value={filterProperty}
               onChange={(e) => setFilterProperty(e.target.value)}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+              className="input"
             >
               <option value="all">All Properties</option>
               {properties.map((prop) => (
@@ -218,17 +211,14 @@ function BillsPage() {
 
           {/* Status Filter */}
           <div>
-            <label
-              htmlFor="filter-status"
-              className="block text-xs font-medium text-gray-500 mb-1"
-            >
+            <label htmlFor="filter-status" className="label">
               Status
             </label>
             <select
               id="filter-status"
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+              className="input"
             >
               <option value="all">All Statuses</option>
               <option value="pending">Pending</option>
@@ -243,17 +233,14 @@ function BillsPage() {
 
         {/* Sort Controls */}
         <div>
-          <label
-            htmlFor="sort-by"
-            className="block text-xs font-medium text-gray-500 mb-1"
-          >
+          <label htmlFor="sort-by" className="label">
             Sort By
           </label>
           <select
             id="sort-by"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+            className="input"
           >
             <option value="due_date_asc">Due Date (Earliest First)</option>
             <option value="due_date_desc">Due Date (Latest First)</option>
@@ -265,7 +252,7 @@ function BillsPage() {
       </section>
 
       <section className="card mt-6">
-        <div className="flex items-center justify-between border-b border-black pb-4">
+        <div className="section-header">
           <h2 className="text-lg font-bold">All Bills</h2>
           <p className="text-sm text-gray-500">
             Showing {filteredAndSortedBills.length} of {bills.length} bills
@@ -323,7 +310,7 @@ function BillsPage() {
                     <button
                       type="button"
                       onClick={() => navigate(`/bills/${bill.id}`)}
-                      className="text-left font-semibold text-primary hover:text-primary-hover hover:underline"
+                      className="link text-left"
                     >
                       {bill.invoice_number ?? "—"}
                     </button>
@@ -346,26 +333,27 @@ function BillsPage() {
                       )}
                     </span>
                   </td>
-                  <td className={stackedCellClassName}>
+                  <td
+                    className={`${stackedCellClassName} md:whitespace-nowrap`}
+                  >
                     <span className="font-semibold md:hidden">Issue Date</span>
-                    {bill.issue_date ?? "—"}
+                    {formatDate(bill.issue_date)}
                   </td>
-                  <td className={stackedCellClassName}>
+                  <td
+                    className={`${stackedCellClassName} md:whitespace-nowrap`}
+                  >
                     <span className="font-semibold md:hidden">Due Date</span>
-                    {bill.due_date ?? "—"}
+                    {formatDate(bill.due_date)}
+                  </td>
+                  <td
+                    className={`${stackedCellClassName} md:whitespace-nowrap`}
+                  >
+                    <span className="font-semibold md:hidden">Amount</span>
+                    {formatCurrency(bill.amount)}
                   </td>
                   <td className={stackedCellClassName}>
-                    <span className="font-semibold md:hidden">Amount</span>
-                    {bill.amount == null
-                      ? "—"
-                      : Number(bill.amount).toLocaleString("en-US", {
-                          style: "currency",
-                          currency: "USD",
-                        })}
-                  </td>
-                  <td className={`${stackedCellClassName} capitalize`}>
                     <span className="font-semibold md:hidden">Status</span>
-                    {formatBillStatus(bill.status)}
+                    <StatusBadge status={bill.status} />
                   </td>
                   <td className="block pt-2 md:table-cell md:px-4 md:py-3">
                     <div className="flex flex-wrap items-center gap-2">
@@ -373,7 +361,7 @@ function BillsPage() {
                         <button
                           type="button"
                           onClick={() => setEditingBill(bill)}
-                          className="btn-secondary w-full px-4 py-2 text-xs md:w-auto md:bg-transparent md:p-0 md:text-sm md:font-medium md:text-primary md:hover:bg-transparent md:hover:text-primary-hover"
+                          className="btn-secondary w-full px-4 py-2 text-xs md:w-auto"
                         >
                           Edit
                         </button>
@@ -381,15 +369,17 @@ function BillsPage() {
                       {/* Unfinished bills open their page, which has the
                           add property / vendor account helpers */}
                       {canEditRecords &&
-                        ["needs_review", "extraction_failed"].includes(bill.status) && (
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/bills/${bill.id}`)}
-                          className="btn-secondary w-full px-4 py-2 text-xs md:w-auto md:bg-transparent md:p-0 md:text-sm md:font-medium md:text-primary md:hover:bg-transparent md:hover:text-primary-hover"
-                        >
-                          Finish
-                        </button>
-                      )}
+                        ["needs_review", "extraction_failed"].includes(
+                          bill.status,
+                        ) && (
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/bills/${bill.id}`)}
+                            className="btn-secondary w-full px-4 py-2 text-xs md:w-auto"
+                          >
+                            Finish
+                          </button>
+                        )}
                       {canEditRecords && bill.status === "approved" && (
                         <button
                           type="button"
