@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import mainSplash from "../assets/billioMain.png";
 
 const LoginPage = () => {
+  const [name, setName] = useState("");
   const [email, setEmail] =useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -23,9 +24,21 @@ const LoginPage = () => {
 
     let result;
     if (isSignUp) {
+      const trimmedName = name.trim();
+      if (!trimmedName) {
+        setErrorMessage("Enter your full name.");
+        setIsSubmitting(false);
+        return;
+      }
+
       result = await supabase.auth.signUp({
-        email: email,
-        password: password,
+        email,
+        password,
+        options: {
+          data: {
+            name: trimmedName,
+          },
+        },
       });
     } else {
       result = await supabase.auth.signInWithPassword ({
@@ -49,7 +62,14 @@ const LoginPage = () => {
     }
 
     if (error) {
-      setErrorMessage(error.message);
+      const isBannedAccount =
+        error.code === "user_banned" ||
+        error.message?.toLowerCase().includes("banned");
+      setErrorMessage(
+        isBannedAccount
+          ? "Your account access is inactive. Contact your organization administrator for access."
+          : error.message,
+      );
       return;
     }
 
@@ -118,6 +138,24 @@ const LoginPage = () => {
               {isSignUp ? "Welcome to Billio! Enter your information below to create your new account." : "Welcome back! Enter your details below."}
             </p>
             <form onSubmit={handleSubmit} className="mt-6 font-sans space-y-4">
+              {isSignUp && (
+                <div>
+                  <label htmlFor="full-name" className="mb-1 block text-sm font-medium text-gray-700">
+                    Full name
+                  </label>
+                  <input
+                    id="full-name"
+                    type="text"
+                    autoComplete="name"
+                    required
+                    maxLength={150}
+                    placeholder="Your full name"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    className={inputClassName}
+                  />
+                </div>
+              )}
               <div>  
                 <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">Email</label>
                 <input

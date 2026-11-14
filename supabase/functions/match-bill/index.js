@@ -1,6 +1,6 @@
 import { withSupabase } from 'jsr:@supabase/server@^1';
 import { validateBill } from '../_shared/validateBill.js';
-import { findVendorId, normalize } from '../_shared/matching.js';
+import { findVendorId, matchAccount } from '../_shared/matching.js';
 
 export default {
 	fetch: withSupabase({ auth: 'user' }, async (req, { supabase }) => {
@@ -24,22 +24,16 @@ export default {
 			return Response.json({ error: error.message }, { status: 500 });
 		}
 
-		// A bill with no readable account number matches nothing here
-		const target = normalize(extracted?.account_number);
-		const matches = target
-			? accounts.filter(
-					(account) => normalize(account.account_number) === target,
-				)
-			: [];
+		const match = matchAccount(accounts, extracted?.account_number);
 
 		// Several accounts share this number → the account exists, so let the person choose
-		if (matches.length > 1) {
+		if (match.kind === 'many') {
 			return Response.json({ data: null }, { status: 200 });
 		}
 
 		// No account → report which company it is, if we know it, so the app can
 		// offer to add an account to that vendor instead of creating a duplicate
-		if (matches.length === 0) {
+		if (match.kind === 'none') {
 			const { data: vendors, error: vendorError } = await supabase
 				.from('vendor')
 				.select('id, name, aliases');

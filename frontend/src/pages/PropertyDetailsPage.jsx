@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import PropertyForm from "../components/PropertyForm";
 import { usePropertyDetails } from "../hooks/usePropertyDetails";
 import { useProperties } from "../hooks/useProperties";
+import { useUserProfile } from "../hooks/useUserProfile";
+import { canManageRecords } from "../utils/permissions";
 
 // Below md each row becomes a card with a label beside every value
 const stackedRowClassName =
@@ -24,6 +26,10 @@ function PropertyDetailsPage() {
     usePropertyDetails();
 
   const { updateProperty } = useProperties();
+
+  const { profile } = useUserProfile();
+  const canEditRecords = canManageRecords(profile?.role);
+  const canPay = canEditRecords;
 
   const [showForm, setShowForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -95,7 +101,7 @@ function PropertyDetailsPage() {
           ← Back to Properties
         </button>
 
-        {property && !loading && !error && (
+        {canEditRecords && property && !loading && !error && (
           <button
             type="button"
             onClick={() => setShowForm(true)}
@@ -105,6 +111,13 @@ function PropertyDetailsPage() {
           </button>
         )}
       </div>
+
+      {!canEditRecords && (
+        <p className="mb-6 text-sm text-gray-600">
+          You have read-only access to this property. Contact a manager or
+          administrator to make changes.
+        </p>
+      )}
 
       {successMessage && (
         <div
@@ -216,10 +229,14 @@ function PropertyDetailsPage() {
 
               <button
                 type="button"
-                onClick={() => navigate("/bills/manual")}
+                onClick={() =>
+                  navigate(
+                    canEditRecords ? "/bills/manual" : "/bills/upload",
+                  )
+                }
                 className="btn-primary px-4 py-2 text-sm"
               >
-                + Add Bill
+                {canEditRecords ? "+ Add Bill" : "Upload Bill"}
               </button>
             </div>
 
@@ -233,6 +250,7 @@ function PropertyDetailsPage() {
                   <th className="px-4 py-3">Due Date</th>
                   <th className="px-4 py-3">Amount</th>
                   <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Actions</th>
                 </tr>
               </thead>
 
@@ -240,7 +258,7 @@ function PropertyDetailsPage() {
                 {bills.length === 0 ? (
                   <tr className="block md:table-row">
                     <td
-                      colSpan="6"
+                      colSpan="7"
                       className="block px-4 py-12 text-center text-gray-600 md:table-cell"
                     >
                       <p className="font-semibold">
@@ -293,7 +311,20 @@ function PropertyDetailsPage() {
 
                       <td className={`${stackedCellClassName} capitalize`}>
                         <span className="font-semibold md:hidden">Status</span>
-                        {bill.status || "—"}
+                        {bill.status === "needs_review"
+                          ? "Needs Review"
+                          : bill.status || "—"}
+                      </td>
+                      <td className="block pt-2 md:table-cell md:px-4 md:py-3">
+                        {bill.status === "approved" && canPay && (
+                          <button
+                            type="button"
+                            // TODO: open the payment flow once payments are built
+                            className="btn-primary w-full px-4 py-2 text-xs md:w-auto"
+                          >
+                            Pay
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -305,7 +336,7 @@ function PropertyDetailsPage() {
       )}
 
       {/* Edit Property Modal */}
-      {showForm && property && (
+      {canEditRecords && showForm && property && (
         <PropertyForm
           key={property.id}
           initialValues={property}

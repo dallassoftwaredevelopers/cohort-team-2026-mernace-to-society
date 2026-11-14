@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import VendorForm from "../components/VendorForm";
 import VendorSummary from "../components/VendorSummary";
+import { useUserProfile } from "../hooks/useUserProfile";
+import { canManageRecords } from "../utils/permissions";
 import { useVendors } from "../hooks/useVendors";
 import { supabase } from "../../utils/supabase";
 
@@ -57,6 +59,8 @@ function renderVendorCell(col, vendor, accountCount) {
 
 function VendorsPage() {
   const { vendors, loading, error, fetchVendors, deleteVendors } = useVendors();
+  const { profile } = useUserProfile();
+  const canEditRecords = canManageRecords(profile?.role);
 
   const [openBillCount, setOpenBillCount] = useState(null);
   const [isLoadingOpenBillCount, setIsLoadingOpenBillCount] = useState(true);
@@ -353,9 +357,11 @@ function VendorsPage() {
   const tableHead = (
     <thead>
       <tr className="text-xs uppercase">
-        <th className="w-8 px-4 py-3 font-semibold">
-          <span className="sr-only">Select</span>
-        </th>
+        {canEditRecords && (
+          <th className="w-8 px-4 py-3 font-semibold">
+            <span className="sr-only">Select</span>
+          </th>
+        )}
 
         {columns.map((col) => (
           <th
@@ -366,9 +372,11 @@ function VendorsPage() {
           </th>
         ))}
 
-        <th className="hidden px-4 py-3 font-semibold md:table-cell">
-          Actions
-        </th>
+        {canEditRecords && (
+          <th className="hidden px-4 py-3 font-semibold md:table-cell">
+            Actions
+          </th>
+        )}
 
         <th className="w-8 md:hidden">
           <span className="sr-only">Open</span>
@@ -380,15 +388,17 @@ function VendorsPage() {
   function renderVendorRow(vendor, accountCount) {
     return (
       <tr key={vendor.id} className="border-t border-section">
-        <td className="px-4 py-3">
-          <input
-            type="checkbox"
-            checked={selectedVendorIds.has(vendor.id)}
-            onChange={() => toggleVendorSelection(vendor.id)}
-            className="h-4 w-4 cursor-pointer"
-            aria-label={`Select ${vendor.name}`}
-          />
-        </td>
+        {canEditRecords && (
+          <td className="px-4 py-3">
+            <input
+              type="checkbox"
+              checked={selectedVendorIds.has(vendor.id)}
+              onChange={() => toggleVendorSelection(vendor.id)}
+              className="h-4 w-4 cursor-pointer"
+              aria-label={`Select ${vendor.name}`}
+            />
+          </td>
+        )}
 
         {columns.map((col) => (
           <td key={col.key} className={`px-4 py-3 ${hideOnMobile(col)}`}>
@@ -396,20 +406,22 @@ function VendorsPage() {
           </td>
         ))}
 
-        <td className="hidden px-4 py-3 md:table-cell">
-          <button
-            type="button"
-            onClick={() => {
-              setFormError("");
-              setEditVendorId(vendor.id);
-              setShowVendorForm(true);
-            }}
-            className="cursor-pointer text-sm text-primary underline"
-            aria-label={`Edit ${vendor.name}`}
-          >
-            Edit
-          </button>
-        </td>
+        {canEditRecords && (
+          <td className="hidden px-4 py-3 md:table-cell">
+            <button
+              type="button"
+              onClick={() => {
+                setFormError("");
+                setEditVendorId(vendor.id);
+                setShowVendorForm(true);
+              }}
+              className="cursor-pointer text-sm text-primary underline"
+              aria-label={`Edit ${vendor.name}`}
+            >
+              Edit
+            </button>
+          </td>
+        )}
 
         <td className="pr-4 text-right md:hidden" aria-hidden="true">
           →
@@ -423,17 +435,26 @@ function VendorsPage() {
       <section className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="font-serif text-2xl font-bold">Vendors</h1>
 
-        <button
-          type="button"
-          onClick={() => {
-            setFormError("");
-            setShowVendorForm(true);
-          }}
-          className="btn-primary cursor-pointer px-5 py-3 text-sm"
-        >
-          + Add Vendor
-        </button>
+        {canEditRecords && (
+          <button
+            type="button"
+            onClick={() => {
+              setFormError("");
+              setShowVendorForm(true);
+            }}
+            className="btn-primary cursor-pointer px-5 py-3 text-sm"
+          >
+            + Add Vendor
+          </button>
+        )}
       </section>
+
+      {!canEditRecords && (
+        <p className="mt-4 text-sm text-gray-600">
+          You have read-only access to vendors. Contact a manager or
+          administrator to make changes.
+        </p>
+      )}
 
       {successMessage && (
         <p role="status" className="mt-4 text-sm text-green-700">
@@ -481,37 +502,40 @@ function VendorsPage() {
         openBillCountError={openBillCountError}
       />
 
-      <div className="mt-6 flex flex-wrap items-center gap-4">
-        <button
-          type="button"
-          onClick={handleDeleteSelected}
-          disabled={selectedVendorIds.size === 0 || isDeleting}
-          className="btn-secondary w-full cursor-pointer px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-        >
-          {isDeleting
-            ? "Deleting..."
-            : `Delete Selected (${selectedVendorIds.size})`}
-        </button>
-      </div>
+      {canEditRecords && (
+        <div className="mt-6 flex flex-wrap items-center gap-4">
+          <button
+            type="button"
+            onClick={handleDeleteSelected}
+            disabled={selectedVendorIds.size === 0 || isDeleting}
+            className="btn-secondary w-full cursor-pointer px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+          >
+            {isDeleting
+              ? "Deleting..."
+              : `Delete Selected (${selectedVendorIds.size})`}
+          </button>
+        </div>
+      )}
 
       <section className="card mt-8">
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-black pb-4">
           <h2 className="text-lg font-bold">Vendors by Service Type</h2>
 
           <div className="flex items-center gap-4">
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={allSelected}
-                ref={(el) => {
-                  if (el) el.indeterminate = someSelected;
-                }}
-                onChange={toggleSelectAll}
-                className="h-4 w-4 cursor-pointer"
-              />
-              Select All
-            </label>
-
+            {canEditRecords && (
+              <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = someSelected;
+                  }}
+                  onChange={toggleSelectAll}
+                  className="h-4 w-4 cursor-pointer"
+                />
+                Select All
+              </label>
+            )}
             <span className="text-sm">{vendors.length} total vendors</span>
           </div>
         </div>
@@ -541,7 +565,7 @@ function VendorsPage() {
                     {typeVendors.length === 0 ? (
                       <tr className="border-t border-section">
                         <td
-                          colSpan={columns.length + 3}
+                          colSpan={columns.length + (canEditRecords ? 3 : 1)}
                           className="px-4 py-3 text-gray-600"
                         >
                           No vendors for this service type.
@@ -587,7 +611,7 @@ function VendorsPage() {
         )}
       </section>
 
-      {showVendorForm && (
+      {canEditRecords && showVendorForm && (
         <VendorForm
           isSubmitting={isSubmitting}
           error={formError}

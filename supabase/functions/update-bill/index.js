@@ -55,7 +55,8 @@ export default {
 				status: result.value.review_reason ? 'needs_review' : 'pending',
 			})
 			.eq('id', body.id)
-			.in('status', ['pending', 'needs_review'])
+			// extraction_failed: the AI couldn't read it, so a person fills it in here
+			.in('status', ['pending', 'needs_review', 'extraction_failed'])
 			.select()
 			.maybeSingle();
 

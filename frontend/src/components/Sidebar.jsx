@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { supabase } from "../../utils/supabase";
+import {
+  formatRole,
+  getInitials,
+  useUserProfile,
+} from "../hooks/useUserProfile";
+import billioLogo from "../assets/billio-dark.png";
 
 const navigationItems = [
   { to: "/dashboard", label: "Dashboard" },
@@ -21,7 +27,11 @@ const navigationClassName = ({ isActive }) =>
 function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const { authUser, profile } = useUserProfile();
   const closeMenu = () => setIsOpen(false);
+  const displayName =
+    profile?.name || authUser?.user_metadata?.full_name || authUser?.email || "Account";
+  const initials = getInitials(profile?.name, authUser?.email);
 
   // Close on Escape and stop the page behind the drawer from scrolling
   useEffect(() => {
@@ -70,12 +80,14 @@ function Sidebar() {
             <path d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <span className="text-lg font-bold text-white">Billio</span>
+        <Link to="/dashboard" className="flex items-center">
+          <img src={billioLogo} alt="Billio dashboard" className="h-8 w-auto" />
+        </Link>
         <span
           className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-avatar text-xs font-semibold text-sidebar"
           aria-hidden="true"
         >
-          RS
+          {initials}
         </span>
       </header>
 
@@ -93,10 +105,20 @@ function Sidebar() {
         id="app-sidebar"
         className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col overflow-y-auto bg-sidebar px-5 py-6 transition-transform duration-200 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
-        } md:static md:min-h-screen md:shrink-0 md:translate-x-0`}
+        } md:sticky md:top-0 md:h-screen md:max-h-screen md:min-h-0 md:shrink-0 md:translate-x-0`}
       >
         <div className="mb-10 flex items-center justify-between">
-          <p className="text-2xl font-bold text-white">Billio</p>
+          <Link
+            to="/dashboard"
+            onClick={closeMenu}
+            className="flex items-center"
+          >
+            <img
+              src={billioLogo}
+              alt="Billio dashboard"
+              className="h-10 w-auto"
+            />
+          </Link>
           <button
             type="button"
             onClick={closeMenu}
@@ -134,11 +156,13 @@ function Sidebar() {
 
           <div className="flex items-center gap-3 px-2">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sidebar-avatar font-semibold text-sidebar">
-              RS
+              {initials}
             </div>
             <div>
-              <p className="text-sm font-medium text-white">Robert Smith</p>
-              <p className="text-xs text-slate-300">Admin</p>
+              <p className="text-sm font-medium text-white">{displayName}</p>
+              <p className="text-xs text-slate-300">
+                {formatRole(profile?.role)}
+              </p>
             </div>
           </div>
 

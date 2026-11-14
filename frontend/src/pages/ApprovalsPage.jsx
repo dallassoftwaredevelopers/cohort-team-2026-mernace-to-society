@@ -371,27 +371,36 @@ function ApprovalsPage() {
                       </button>
                       {["pending", "needs_review"].includes(bill.status) &&
                         canApprove && (
-                        <>
-                          <button
-                            type="button"
-                            disabled={isSubmitting}
-                            onClick={() => {
-                              setRejectionBill(bill);
-                              setRejectionReason("");
-                            }}
-                            className="btn-secondary flex-1 cursor-pointer px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60 md:flex-none"
-                          >
-                            Reject
-                          </button>
-                          <button
-                            type="button"
-                            disabled={isSubmitting}
-                            onClick={() => handleApprove(bill)}
-                            className="btn-primary flex-1 cursor-pointer px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60 md:flex-none"
-                          >
-                            Approve
-                          </button>
-                        </>
+                          <>
+                            <button
+                              type="button"
+                              disabled={isSubmitting}
+                              onClick={() => {
+                                setRejectionBill(bill);
+                                setRejectionReason("");
+                              }}
+                              className="btn-secondary flex-1 cursor-pointer px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60 md:flex-none"
+                            >
+                              Reject
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isSubmitting}
+                              onClick={() => handleApprove(bill)}
+                              className="btn-primary flex-1 cursor-pointer px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60 md:flex-none"
+                            >
+                              Approve
+                            </button>
+                          </>
+                        )}
+                      {bill.status === "approved" && canApprove && (
+                        <button
+                          type="button"
+                          // TODO: open the payment flow once payments are built
+                          className="btn-primary flex-1 cursor-pointer px-3 py-2 text-xs md:flex-none"
+                        >
+                          Pay
+                        </button>
                       )}
                     </div>
                   </td>
@@ -493,7 +502,7 @@ function ApprovalsPage() {
                 ["Issue Date", formatDate(selectedBill.issue_date)],
                 ["Due Date", formatDate(selectedBill.due_date)],
                 ["Source", selectedBill.source],
-                ["Status", selectedBill.status],
+                ["Status", formatBillStatus(selectedBill.status)],
                 ["Review Reason", selectedBill.review_reason],
                 ["Rejection Reason", selectedBill.rejection_reason],
               ].map(([label, value]) => (
@@ -505,6 +514,17 @@ function ApprovalsPage() {
                 </div>
               ))}
             </dl>
+            {selectedBill.status === "approved" && canApprove && (
+              <div className="mt-6 flex justify-end border-t border-gray-200 pt-4">
+                <button
+                  type="button"
+                  // TODO: open the payment flow once payments are built
+                  className="btn-primary px-5 py-2.5 text-sm"
+                >
+                  Pay this bill
+                </button>
+              </div>
+            )}
           </section>
         </div>
       )}

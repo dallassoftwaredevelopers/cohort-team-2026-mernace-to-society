@@ -6,6 +6,8 @@ import { useProperties } from "../hooks/useProperties";
 import { supabase } from "../../utils/supabase";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useUserProfile } from "../hooks/useUserProfile";
+import { canManageRecords } from "../utils/permissions";
 
 function DashboardPage() {
   const [open, setOpen] = useState(false);
@@ -15,6 +17,8 @@ function DashboardPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const { createProperty } = useProperties();
   const navigate = useNavigate();
+  const { profile, authUser } = useUserProfile();
+  const canEditRecords = canManageRecords(profile?.role);
 
   // Wraps the Add Bill button and its menu, so we can tell inside clicks from outside ones
   const dropdownRef = useRef(null);
@@ -101,7 +105,7 @@ function DashboardPage() {
       <section className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-serif text-2xl font-bold">
-            Welcome Back, Robert
+            Welcome Back, {profile?.name || authUser?.email || "there"}
           </h1>
           <p className="mt-2 text-sm">
             Review pending property bills, track expenses, and record payments.
@@ -119,10 +123,13 @@ function DashboardPage() {
             </button>
             {open && (
               <div className="absolute left-0 z-10 mt-2 w-48 rounded-lg border border-secondary bg-white py-2 shadow-lg sm:left-auto sm:right-0">
-                {[
-                  { label: "Enter Manually", path: "/bills/manual" },
-                  { label: "Upload Bill", path: "/bills/upload" },
-                ].map(({ label, path }) => (
+                {(canEditRecords
+                  ? [
+                      { label: "Enter Manually", path: "/bills/manual" },
+                      { label: "Upload Bill", path: "/bills/upload" },
+                    ]
+                  : [{ label: "Upload Bill", path: "/bills/upload" }]
+                ).map(({ label, path }) => (
                   <button
                     key={label}
                     type="button"
@@ -138,26 +145,30 @@ function DashboardPage() {
               </div>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setFormError("");
-              setActiveForm("property");
-            }}
-            className="btn-secondary px-5 py-3 text-sm"
-          >
-            Add Property
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setFormError("");
-              setActiveForm("vendor");
-            }}
-            className="btn-secondary px-5 py-3 text-sm"
-          >
-            Add Vendor
-          </button>
+          {canEditRecords && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setFormError("");
+                  setActiveForm("property");
+                }}
+                className="btn-secondary px-5 py-3 text-sm"
+              >
+                Add Property
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFormError("");
+                  setActiveForm("vendor");
+                }}
+                className="btn-secondary px-5 py-3 text-sm"
+              >
+                Add Vendor
+              </button>
+            </>
+          )}
         </div>
       </section>
 
@@ -180,7 +191,7 @@ function DashboardPage() {
           onSubmit={handleCreateProperty}
         />
       )}
-      {activeForm === "vendor" && (
+      {canEditRecords && activeForm === "vendor" && (
         <VendorForm
           key="dashboard-vendor"
           isSubmitting={isSubmitting}

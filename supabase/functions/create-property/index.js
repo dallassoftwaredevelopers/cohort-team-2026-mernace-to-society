@@ -37,6 +37,17 @@ export default {
 			.select()
 			.single();
 
+		// property.name is unique (property_name_key)
+		if (error?.code === "23505") {
+			return Response.json(
+				{
+					error:
+						`A property named "${result.value.name}" already exists. Choose it from the property list instead.`,
+				},
+				{ status: 409 },
+			);
+		}
+
 		if (error) {
 			return Response.json(
 				{ error: error.message },

@@ -35,6 +35,29 @@ const BILL_SCHEMA = {
 		amount: { type: ['number', 'null'], description: 'Total amount due' },
 		issue_date: { type: ['string', 'null'], description: 'YYYY-MM-DD' },
 		due_date: { type: ['string', 'null'], description: 'YYYY-MM-DD' },
+		// Who is billed, e.g. "HarborLite Design Co." Only a suggestion for a new
+		// property's name; never used to match or assign a bill.
+		customer_name: {
+			type: ['string', 'null'],
+			description:
+				'The customer, account holder or location name being billed, not the vendor',
+		},
+		// Same field names as PropertyForm, so it can pre-fill a new property.
+		// Always an object (strict mode); unknown parts are null.
+		service_address: {
+			type: 'object',
+			description:
+				'Where the service is provided (the property), not the vendor payment address',
+			properties: {
+				street: { type: ['string', 'null'] },
+				city: { type: ['string', 'null'] },
+				state: { type: ['string', 'null'], description: '2-letter code, e.g. NY' },
+				// A string so leading zeros survive (e.g. 02134)
+				zip: { type: ['string', 'null'] },
+			},
+			required: ['street', 'city', 'state', 'zip'],
+			additionalProperties: false,
+		},
 		line_items: {
 			type: 'array',
 			items: {
@@ -55,6 +78,8 @@ const BILL_SCHEMA = {
 		'amount',
 		'issue_date',
 		'due_date',
+		'customer_name',
+		'service_address',
 		'line_items',
 	],
 	additionalProperties: false,
@@ -63,6 +88,7 @@ const BILL_SCHEMA = {
 const PROMPT =
 	'Extract the details of this utility bill or invoice. ' +
 	'Use null for anything you cannot find. Do not guess. ' +
+	'service_address is where the service is delivered, not where to send payment. ' +
 	'Dates must be YYYY-MM-DD. Amounts are plain numbers with no currency symbols.';
 
 // Sends a file to OpenRouter and returns the extracted bill as an object.

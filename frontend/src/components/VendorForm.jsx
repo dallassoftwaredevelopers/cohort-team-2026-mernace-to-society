@@ -23,7 +23,7 @@ function VendorForm({
   editMode = false,
   addAccountMode = false,
   vendorData = null,
-  // Starting values read from a bill: { name, account_number }. Either can be missing.
+  // Starting values read from a bill: { name, account_number, property_id }. Any can be missing.
   initialValues = null,
 }) {
   // A form opened from a bill exists to create the account, so it isn't optional there
@@ -49,13 +49,14 @@ function VendorForm({
         phone_number: vendorData.phone_number || "",
         account_number: initialValues?.account_number || "",
         service: "",
-        property_id: "",
+        property_id: initialValues?.property_id || "",
       };
     }
     return {
       ...emptyVendor,
       name: initialValues?.name || "",
       account_number: initialValues?.account_number || "",
+      property_id: initialValues?.property_id || "",
     };
   });
 

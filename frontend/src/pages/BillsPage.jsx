@@ -1,7 +1,9 @@
 import BillDetailsForm from "../components/BillDetailsForm";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../utils/supabase";
+import { useUserProfile } from "../hooks/useUserProfile";
+import { canManageRecords } from "../utils/permissions";
 
 const billColumns = [
   "Invoice number",
@@ -17,7 +19,6 @@ const billColumns = [
 const cellMessageClassName =
   "block px-4 py-12 text-center text-gray-600 md:table-cell";
 
-// Below md each row becomes a card with a label beside every value
 const stackedRowClassName =
   "mb-4 block rounded-lg bg-white p-4 md:mb-0 md:table-row md:rounded-none md:border-t md:border-gray-200 md:bg-transparent md:p-0";
 const stackedCellClassName =
@@ -25,20 +26,27 @@ const stackedCellClassName =
 
 function formatBillStatus(status) {
   if (status === "needs_review") return "Needs Review";
+  if (status === "extraction_failed") return "Couldn't Read";
   return status;
 }
 
 function BillsPage() {
   const [open, setOpen] = useState(false);
   const [bills, setBills] = useState([]);
+  const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-  // The bill whose Edit button was clicked; null keeps the modal closed
   const [editingBill, setEditingBill] = useState(null);
-
-  // Bumping this re-runs the fetch below (e.g. after a bill is edited)
   const [reloadCount, setReloadCount] = useState(0);
+
+  // Filter & Sort States
+  const [filterProperty, setFilterProperty] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [sortBy, setSortBy] = useState("due_date_asc");
+
   const navigate = useNavigate();
+  const { profile } = useUserProfile();
+  const canEditRecords = canManageRecords(profile?.role);
 
   // Wraps the Add Bill button and its menu, so we can tell inside clicks from outside ones
   const dropdownRef = useRef(null);
@@ -66,31 +74,72 @@ function BillsPage() {
     };
   }, [open]);
 
+  // Load bills and properties for filters
   useEffect(() => {
-    async function loadBills() {
-      // The client sends the logged-in user's token, so RLS decides which rows come back.
-      // property_id and vendor_account_id are needed to pre-fill the edit form.
-      const { data, error } = await supabase
-        .from("bill")
-        .select(
-          "id, invoice_number, issue_date, due_date, amount, status, extracted_vendor_name, review_reason, property_id, vendor_account_id, property(name), vendor_account(service, vendor(name))",
-        )
-        .order("due_date", { ascending: true });
+    async function loadData() {
+      setLoading(true);
+      const [billsRes, propsRes] = await Promise.all([
+        supabase
+          .from("bill")
+          .select(
+            "id, invoice_number, issue_date, due_date, amount, status, extracted_vendor_name, review_reason, property_id, vendor_account_id, property(name), vendor_account(service, vendor(name))",
+          ),
+        supabase.from("property").select("id, name").order("name"),
+      ]);
 
-      if (error) {
+      if (billsRes.error) {
         setErrorMessage("Could not load bills. Please try again.");
       } else {
         setErrorMessage("");
-        setBills(data);
+        setBills(billsRes.data || []);
       }
+
+      if (!propsRes.error) {
+        setProperties(propsRes.data || []);
+      }
+
       setLoading(false);
     }
-    loadBills();
+    loadData();
   }, [reloadCount]);
+
+  // Filter and Sort Logic
+  const filteredAndSortedBills = useMemo(() => {
+    let result = [...bills];
+
+    // Filter by Property
+    if (filterProperty !== "all") {
+      result = result.filter((bill) => bill.property_id === filterProperty);
+    }
+
+    // Filter by Status
+    if (filterStatus !== "all") {
+      result = result.filter((bill) => bill.status === filterStatus);
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case "due_date_asc":
+          return (a.due_date || "").localeCompare(b.due_date || "");
+        case "due_date_desc":
+          return (b.due_date || "").localeCompare(a.due_date || "");
+        case "amount_desc":
+          return Number(b.amount || 0) - Number(a.amount || 0);
+        case "amount_asc":
+          return Number(a.amount || 0) - Number(b.amount || 0);
+        case "issue_date_desc":
+          return (b.issue_date || "").localeCompare(a.issue_date || "");
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [bills, filterProperty, filterStatus, sortBy]);
 
   function handleBillSaved() {
     setEditingBill(null);
-    // Re-fetch so the joined property/vendor names reflect the edit
     setReloadCount((count) => count + 1);
   }
 
@@ -100,7 +149,9 @@ function BillsPage() {
         <div>
           <h1 className="font-serif text-2xl font-bold">Bills</h1>
           <p className="mt-2 text-sm text-gray-600">
-            View and manage bills for your properties.
+            {canEditRecords
+              ? "View and manage bills for your properties."
+              : "View bills or upload a new bill for review."}
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -114,10 +165,13 @@ function BillsPage() {
             </button>
             {open && (
               <div className="absolute left-0 z-10 mt-2 w-48 rounded-lg border border-secondary bg-white py-2 shadow-lg sm:left-auto sm:right-0">
-                {[
-                  { label: "Enter Manually", path: "/bills/manual" },
-                  { label: "Upload Bill", path: "/bills/upload" },
-                ].map(({ label, path }) => (
+                {(canEditRecords
+                  ? [
+                      { label: "Enter Manually", path: "/bills/manual" },
+                      { label: "Upload Bill", path: "/bills/upload" },
+                    ]
+                  : [{ label: "Upload Bill", path: "/bills/upload" }]
+                ).map(({ label, path }) => (
                   <button
                     key={label}
                     type="button"
@@ -136,12 +190,89 @@ function BillsPage() {
         </div>
       </section>
 
-      <section className="card mt-8">
-        <h2 className="border-b border-black pb-4 text-lg font-bold">
-          All Bills
-        </h2>
+      {/* Filter & Sort Controls Bar */}
+      <section className="card mt-6 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Property Filter */}
+          <div>
+            <label
+              htmlFor="filter-property"
+              className="block text-xs font-medium text-gray-500 mb-1"
+            >
+              Property
+            </label>
+            <select
+              id="filter-property"
+              value={filterProperty}
+              onChange={(e) => setFilterProperty(e.target.value)}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+            >
+              <option value="all">All Properties</option>
+              {properties.map((prop) => (
+                <option key={prop.id} value={prop.id}>
+                  {prop.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Status Filter */}
+          <div>
+            <label
+              htmlFor="filter-status"
+              className="block text-xs font-medium text-gray-500 mb-1"
+            >
+              Status
+            </label>
+            <select
+              id="filter-status"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+            >
+              <option value="all">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="needs_review">Needs Review</option>
+              <option value="extraction_failed">Couldn't Read</option>
+              <option value="approved">Approved</option>
+              <option value="paid">Paid</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Sort Controls */}
+        <div>
+          <label
+            htmlFor="sort-by"
+            className="block text-xs font-medium text-gray-500 mb-1"
+          >
+            Sort By
+          </label>
+          <select
+            id="sort-by"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+          >
+            <option value="due_date_asc">Due Date (Earliest First)</option>
+            <option value="due_date_desc">Due Date (Latest First)</option>
+            <option value="amount_desc">Amount (Highest First)</option>
+            <option value="amount_asc">Amount (Lowest First)</option>
+            <option value="issue_date_desc">Issue Date (Newest First)</option>
+          </select>
+        </div>
+      </section>
+
+      <section className="card mt-6">
+        <div className="flex items-center justify-between border-b border-black pb-4">
+          <h2 className="text-lg font-bold">All Bills</h2>
+          <p className="text-sm text-gray-500">
+            Showing {filteredAndSortedBills.length} of {bills.length} bills
+          </p>
+        </div>
+
         <table className="mt-4 w-full text-left text-sm">
-          {/* Column headers only show from md up; cards use inline labels */}
           <thead className="hidden md:table-header-group">
             <tr className="text-xs uppercase">
               {billColumns.map((column) => (
@@ -170,20 +301,22 @@ function BillsPage() {
                   {errorMessage}
                 </td>
               </tr>
-            ) : bills.length === 0 ? (
+            ) : filteredAndSortedBills.length === 0 ? (
               <tr className="block md:table-row">
                 <td
                   colSpan={billColumns.length}
                   className={cellMessageClassName}
                 >
-                  <p className="font-medium text-gray-800">No bills yet</p>
-                  <p className="mt-2">
-                    Add a bill manually or upload a document to get started.
+                  <p className="font-medium text-gray-800">
+                    No bills match your filters
+                  </p>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Try adjusting your property or status filters.
                   </p>
                 </td>
               </tr>
             ) : (
-              bills.map((bill) => (
+              filteredAndSortedBills.map((bill) => (
                 <tr key={bill.id} className={stackedRowClassName}>
                   <td className={stackedCellClassName}>
                     <span className="font-semibold md:hidden">Invoice #</span>
@@ -201,7 +334,6 @@ function BillsPage() {
                   </td>
                   <td className={stackedCellClassName}>
                     <span className="font-semibold md:hidden">Vendor</span>
-                    {/* Uploaded bills may only have the AI-extracted vendor name */}
                     <span className="text-right md:text-left">
                       {bill.vendor_account?.vendor?.name ??
                         bill.extracted_vendor_name ??
@@ -236,16 +368,38 @@ function BillsPage() {
                     {formatBillStatus(bill.status)}
                   </td>
                   <td className="block pt-2 md:table-cell md:px-4 md:py-3">
-                    {/* Pending and needs-review bills can be edited. */}
-                    {["pending", "needs_review"].includes(bill.status) && (
-                      <button
-                        type="button"
-                        onClick={() => setEditingBill(bill)}
-                        className="btn-secondary w-full px-4 py-2 text-xs md:w-auto md:bg-transparent md:p-0 md:text-sm md:font-medium md:text-primary md:hover:bg-transparent md:hover:text-primary-hover"
-                      >
-                        Edit
-                      </button>
-                    )}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {canEditRecords && bill.status === "pending" && (
+                        <button
+                          type="button"
+                          onClick={() => setEditingBill(bill)}
+                          className="btn-secondary w-full px-4 py-2 text-xs md:w-auto md:bg-transparent md:p-0 md:text-sm md:font-medium md:text-primary md:hover:bg-transparent md:hover:text-primary-hover"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      {/* Unfinished bills open their page, which has the
+                          add property / vendor account helpers */}
+                      {canEditRecords &&
+                        ["needs_review", "extraction_failed"].includes(bill.status) && (
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/bills/${bill.id}`)}
+                          className="btn-secondary w-full px-4 py-2 text-xs md:w-auto md:bg-transparent md:p-0 md:text-sm md:font-medium md:text-primary md:hover:bg-transparent md:hover:text-primary-hover"
+                        >
+                          Finish
+                        </button>
+                      )}
+                      {canEditRecords && bill.status === "approved" && (
+                        <button
+                          type="button"
+                          // TODO: open the payment flow once payments are built
+                          className="btn-primary w-full px-4 py-2 text-xs md:w-auto"
+                        >
+                          Pay
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))
@@ -254,7 +408,7 @@ function BillsPage() {
         </table>
       </section>
 
-      {editingBill && (
+      {canEditRecords && editingBill && (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
           <div className="my-auto w-full max-w-2xl rounded-xl bg-white p-4 shadow-xl sm:p-6">
             <div className="flex items-center justify-between">
@@ -268,7 +422,6 @@ function BillsPage() {
                 &times;
               </button>
             </div>
-            {/* key resets the form if a different bill is opened */}
             <BillDetailsForm
               key={editingBill.id}
               bill={editingBill}
