@@ -27,70 +27,74 @@ export const MIME_BY_EXTENSION = {
 // The shape we ask the model to return. match-bill (DC-77) validates it for real;
 // this schema only tells the model what to produce.
 const BILL_SCHEMA = {
-	type: 'object',
-	properties: {
-		vendor_name: { type: ['string', 'null'] },
-		account_number: { type: ['string', 'null'] },
-		invoice_number: { type: ['string', 'null'] },
-		amount: { type: ['number', 'null'], description: 'Total amount due' },
-		issue_date: { type: ['string', 'null'], description: 'YYYY-MM-DD' },
-		due_date: { type: ['string', 'null'], description: 'YYYY-MM-DD' },
-		// Who is billed, e.g. "HarborLite Design Co." Only a suggestion for a new
-		// property's name; never used to match or assign a bill.
-		customer_name: {
-			type: ['string', 'null'],
-			description:
-				'The customer, account holder or location name being billed, not the vendor',
-		},
-		// Same field names as PropertyForm, so it can pre-fill a new property.
-		// Always an object (strict mode); unknown parts are null.
-		service_address: {
-			type: 'object',
-			description:
-				'Where the service is provided (the property), not the vendor payment address',
-			properties: {
-				street: { type: ['string', 'null'] },
-				city: { type: ['string', 'null'] },
-				state: { type: ['string', 'null'], description: '2-letter code, e.g. NY' },
-				// A string so leading zeros survive (e.g. 02134)
-				zip: { type: ['string', 'null'] },
-			},
-			required: ['street', 'city', 'state', 'zip'],
-			additionalProperties: false,
-		},
-		line_items: {
-			type: 'array',
-			items: {
-				type: 'object',
-				properties: {
-					description: { type: 'string' },
-					amount: { type: 'number' },
-				},
-				required: ['description', 'amount'],
-				additionalProperties: false,
-			},
-		},
-	},
-	required: [
-		'vendor_name',
-		'account_number',
-		'invoice_number',
-		'amount',
-		'issue_date',
-		'due_date',
-		'customer_name',
-		'service_address',
-		'line_items',
-	],
-	additionalProperties: false,
+    type: 'object',
+    properties: {
+        vendor_name: { type: ['string', 'null'] },
+        account_number: { type: ['string', 'null'] },
+        invoice_number: { type: ['string', 'null'] },
+        amount: { type: ['number', 'null'], description: 'Total amount due' },
+        issue_date: { type: ['string', 'null'], description: 'YYYY-MM-DD' },
+        due_date: { type: ['string', 'null'], description: 'YYYY-MM-DD' },
+        bill_url: { type: ['string', 'null'], description: 'Any payment or account URL printed on the bill' },
+        extracted_url: { type: ['string', 'null'], description: 'Extracted payment or account URL from the bill' },
+        // Who is billed, e.g. "HarborLite Design Co." Only a suggestion for a new
+        // property's name; never used to match or assign a bill.
+        customer_name: {
+            type: ['string', 'null'],
+            description:
+                'The customer, account holder or location name being billed, not the vendor',
+        },
+        // Same field names as PropertyForm, so it can pre-fill a new property.
+        // Always an object (strict mode); unknown parts are null.
+        service_address: {
+            type: 'object',
+            description:
+                'Where the service is provided (the property), not the vendor payment address',
+            properties: {
+                street: { type: ['string', 'null'] },
+                city: { type: ['string', 'null'] },
+                state: { type: ['string', 'null'], description: '2-letter code, e.g. NY' },
+                // A string so leading zeros survive (e.g. 02134)
+                zip: { type: ['string', 'null'] },
+            },
+            required: ['street', 'city', 'state', 'zip'],
+            additionalProperties: false,
+        },
+        line_items: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    description: { type: 'string' },
+                    amount: { type: 'number' },
+                },
+                required: ['description', 'amount'],
+                additionalProperties: false,
+            },
+        },
+    },
+    required: [
+        'vendor_name',
+        'account_number',
+        'invoice_number',
+        'amount',
+        'issue_date',
+        'due_date',
+        'bill_url',
+        'extracted_url',
+        'customer_name',
+        'service_address',
+        'line_items',
+    ],
+    additionalProperties: false,
 };
 
 const PROMPT =
-	'Extract the details of this utility bill or invoice. ' +
-	'Use null for anything you cannot find. Do not guess. ' +
-	'service_address is where the service is delivered, not where to send payment. ' +
-	'Dates must be YYYY-MM-DD. Amounts are plain numbers with no currency symbols.';
-
+    'Extract the details of this utility bill or invoice. ' +
+    'Use null for anything you cannot find. Do not guess. ' +
+    'service_address is where the service is delivered, not where to send payment. ' +
+    'Dates must be YYYY-MM-DD. Amounts are plain numbers with no currency symbols. ' +
+    'Extract any payment or account URLs printed on the bill into bill_url and extracted_url.';
 // Sends a file to OpenRouter and returns the extracted bill as an object.
 // Throws if the API call fails or the model's answer isn't valid JSON,
 // so the caller decides what to do (e.g. mark the bill as failed).
