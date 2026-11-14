@@ -2,15 +2,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import VendorForm from "../components/VendorForm";
+import VendorSummary from "../components/VendorSummary";
 import { useVendors } from "../hooks/useVendors";
 import { supabase } from "../../utils/supabase";
-
-const cards = [
-  { title: "Total Vendors", value: "0", note: "Across 0 service types" },
-  { title: "Vendor Accounts", value: "0", note: "Linked to 0 properties" },
-  { title: "Open Bills", value: "0", note: "From 0 vendors" },
-  { title: "Active Vendors", value: "0", note: "0 inactive" },
-];
 
 const serviceTypes = [
   "Electric",
@@ -64,6 +58,9 @@ function renderVendorCell(col, vendor, accountCount) {
 function VendorsPage() {
   const { vendors, loading, error, fetchVendors, deleteVendors } = useVendors();
 
+  const [openBillCount, setOpenBillCount] = useState(null);
+  const [isLoadingOpenBillCount, setIsLoadingOpenBillCount] = useState(true);
+  const [openBillCountError, setOpenBillCountError] = useState("");
   const [showVendorForm, setShowVendorForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -107,6 +104,50 @@ function VendorsPage() {
   useEffect(() => {
     fetchVendors().catch(() => {});
   }, [fetchVendors]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadOpenBillCount() {
+      try {
+        const { count, error: queryError } = await supabase
+          .from("bill")
+          .select("id, vendor_account!inner(vendor_id)", {
+            count: "exact",
+            head: true,
+          })
+          .in("status", ["pending", "needs_review", "approved"]);
+
+        if (queryError) throw queryError;
+        if (count === null) {
+          throw new Error("Supabase did not return the open bill count.");
+        }
+
+        if (isMounted) {
+          setOpenBillCount(count);
+          setOpenBillCountError("");
+        }
+      } catch (caughtError) {
+        if (isMounted) {
+          setOpenBillCountError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Could not load open bills.",
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingOpenBillCount(false);
+        }
+      }
+    }
+
+    loadOpenBillCount();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   function closeVendorForm() {
     setShowVendorForm(false);
@@ -290,6 +331,25 @@ function VendorsPage() {
     ),
   }));
 
+  const vendorAccountCount = vendors.reduce(
+    (total, vendor) => total + (vendor.vendor_account || []).length,
+    0,
+  );
+  const vendorsWithAccountsCount = vendors.filter(
+    (vendor) => (vendor.vendor_account || []).length > 0,
+  ).length;
+  const serviceTypeCount = new Set(
+    vendors.flatMap((vendor) =>
+      (vendor.vendor_account || [])
+        .map((account) => account.service?.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ).size;
+  const activeVendorCount = vendors.filter(
+    (vendor) => vendor.status === "active",
+  ).length;
+  const inactiveVendorCount = vendors.length - activeVendorCount;
+
   const tableHead = (
     <thead>
       <tr className="text-xs uppercase">
@@ -407,15 +467,19 @@ function VendorsPage() {
         />
       </div>
 
-      <section className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
-        {cards.map(({ title, value, note }) => (
-          <div key={title} className="card">
-            <h3 className="text-sm font-semibold">{title}</h3>
-            <p className="mt-3 text-3xl font-bold">{value}</p>
-            {note && <p className="mt-1 text-xs">{note}</p>}
-          </div>
-        ))}
-      </section>
+      <VendorSummary
+        totalVendorCount={vendors.length}
+        vendorAccountCount={vendorAccountCount}
+        serviceTypeCount={serviceTypeCount}
+        vendorsWithAccountsCount={vendorsWithAccountsCount}
+        activeVendorCount={activeVendorCount}
+        inactiveVendorCount={inactiveVendorCount}
+        isLoadingVendors={loading}
+        vendorError={error}
+        openBillCount={openBillCount}
+        isLoadingOpenBillCount={isLoadingOpenBillCount}
+        openBillCountError={openBillCountError}
+      />
 
       <div className="mt-6 flex flex-wrap items-center gap-4">
         <button
