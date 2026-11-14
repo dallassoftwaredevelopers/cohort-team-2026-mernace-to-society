@@ -75,12 +75,38 @@ function VendorsPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [selectedVendorIds, setSelectedVendorIds] = useState(new Set());
   const [editVendorId, setEditVendorId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const unassignedVendors = vendors.filter(
+  const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+  const normalizedAccountSearchTerm = normalizedSearchTerm.replace(/\s/g, "");
+  const filteredVendors = vendors.filter((vendor) => {
+    if (!normalizedSearchTerm) return true;
+
+    return (
+      String(vendor.name ?? "")
+        .toLowerCase()
+        .includes(normalizedSearchTerm) ||
+      (vendor.aliases || []).some((alias) =>
+        String(alias).toLowerCase().includes(normalizedSearchTerm),
+      ) ||
+      (vendor.vendor_account || []).some(
+        (account) =>
+          String(account.service ?? "")
+            .toLowerCase()
+            .includes(normalizedSearchTerm) ||
+          String(account.account_number ?? "")
+            .replace(/\s/g, "")
+            .toLowerCase()
+            .includes(normalizedAccountSearchTerm),
+      )
+    );
+  });
+
+  const unassignedVendors = filteredVendors.filter(
     (vendor) => !(vendor.vendor_account || []).length,
   );
 
-  const allDisplayedVendors = vendors;
+  const allDisplayedVendors = filteredVendors;
 
   useEffect(() => {
     fetchVendors().catch(() => {});
@@ -261,7 +287,7 @@ function VendorsPage() {
 
   const vendorsByService = serviceTypes.map((type) => ({
     type,
-    vendors: vendors.filter((vendor) =>
+    vendors: filteredVendors.filter((vendor) =>
       (vendor.vendor_account || []).some(
         (account) => account.service?.toLowerCase() === type.toLowerCase(),
       ),
@@ -396,6 +422,8 @@ function VendorsPage() {
           id="vendor-search"
           type="search"
           placeholder="Search vendors"
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
           className="w-full rounded-lg border border-secondary px-4 py-3 text-sm md:max-w-sm"
         />
       </div>
@@ -450,6 +478,12 @@ function VendorsPage() {
 
         {loading && vendors.length === 0 ? (
           <p className="mt-4 text-sm text-gray-600">Loading vendors…</p>
+        ) : filteredVendors.length === 0 ? (
+          <p className="mt-4 text-sm text-gray-600">
+            {normalizedSearchTerm
+              ? "No vendors match your search."
+              : "No vendors found."}
+          </p>
         ) : (
           <>
             {vendorsByService.map(({ type, vendors: typeVendors }) => (
