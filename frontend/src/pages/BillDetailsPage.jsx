@@ -5,21 +5,11 @@ import FinishBillPanel from "../components/FinishBillPanel";
 import { supabase } from "../../utils/supabase";
 import { useUserProfile } from "../hooks/useUserProfile";
 import { canManageRecords } from "../utils/permissions";
-
-const formatCurrency = (amount) =>
-  Number(amount || 0).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-  });
+import StatusBadge from "../components/StatusBadge";
+import { formatCurrency, formatDate } from "../utils/format";
 
 // Saved bills that can't go to approval until someone fills in what's missing
 const UNFINISHED = ["needs_review", "extraction_failed"];
-
-function formatBillStatus(status) {
-  if (status === "needs_review") return "Needs Review";
-  if (status === "extraction_failed") return "Couldn't Read";
-  return status ? status.charAt(0).toUpperCase() + status.slice(1) : "—";
-}
 
 function BillDetailsPage() {
   const { billId } = useParams();
@@ -56,7 +46,7 @@ function BillDetailsPage() {
             service,
             vendor(name)
           )
-        `
+        `,
         )
         .eq("id", billId)
         .single();
@@ -66,7 +56,7 @@ function BillDetailsPage() {
       setBill(data);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Unable to retrieve bill details."
+        err instanceof Error ? err.message : "Unable to retrieve bill details.",
       );
     } finally {
       setLoading(false);
@@ -81,7 +71,7 @@ function BillDetailsPage() {
     setSuccessMessage(
       updatedBill?.status === "pending"
         ? "Bill saved and sent for approval."
-        : "Bill updated successfully."
+        : "Bill updated successfully.",
     );
     setShowEditForm(false);
     if (updatedBill) {
@@ -103,11 +93,16 @@ function BillDetailsPage() {
     { label: "Invoice Number", value: bill?.invoice_number },
     { label: "Property", value: bill?.property?.name },
     { label: "Vendor", value: vendorName },
-    { label: "Service / Account", value: accountNumber ? `${serviceName || "Service"} (Acct: ${accountNumber})` : serviceName },
-    { label: "Issue Date", value: bill?.issue_date },
-    { label: "Due Date", value: bill?.due_date },
+    {
+      label: "Service / Account",
+      value: accountNumber
+        ? `${serviceName || "Service"} (Acct: ${accountNumber})`
+        : serviceName,
+    },
+    { label: "Issue Date", value: formatDate(bill?.issue_date) },
+    { label: "Due Date", value: formatDate(bill?.due_date) },
     { label: "Amount", value: formatCurrency(bill?.amount) },
-    { label: "Status", value: formatBillStatus(bill?.status) },
+    { label: "Status", value: <StatusBadge status={bill?.status} /> },
   ];
 
   // Unfinished bills get the finish panel below instead of the Edit modal
@@ -121,7 +116,7 @@ function BillDetailsPage() {
         <button
           type="button"
           onClick={() => navigate("/bills")}
-          className="text-sm font-semibold text-primary hover:underline"
+          className="link text-sm"
         >
           ← Back to Bills
         </button>
@@ -138,10 +133,7 @@ function BillDetailsPage() {
       </div>
 
       {successMessage && (
-        <div
-          role="status"
-          className="mb-6 rounded-lg bg-green-50 p-4 text-sm text-green-700"
-        >
+        <div role="status" className="alert-success mb-6">
           {successMessage}
         </div>
       )}
@@ -151,7 +143,9 @@ function BillDetailsPage() {
           Loading bill details...
         </div>
       ) : error ? (
-        <div className="rounded-lg bg-red-50 p-6 text-red-700">{error}</div>
+        <div role="alert" className="alert-error">
+          {error}
+        </div>
       ) : !bill ? (
         <div className="py-16 text-center text-gray-600">Bill not found.</div>
       ) : (
@@ -159,34 +153,20 @@ function BillDetailsPage() {
           {/* Bill Header */}
           <section className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
-              <h1 className="font-serif text-2xl font-bold md:text-3xl">
+              <h1 className="page-title md:text-3xl">
                 Invoice #{bill.invoice_number || "—"}
               </h1>
-              <p className="mt-2 text-sm text-gray-600">
+              <p className="page-subtitle">
                 {vendorName} {serviceName ? `· ${serviceName}` : ""}
               </p>
             </div>
 
-            <span
-              className={`rounded-full px-3 py-1 text-sm font-semibold capitalize ${
-                bill.status === "paid"
-                  ? "bg-green-100 text-green-800"
-                  : bill.status === "extraction_failed"
-                  ? "bg-red-100 text-red-800"
-                  : bill.status === "needs_review"
-                  ? "bg-yellow-100 text-yellow-800"
-                  : "bg-blue-100 text-blue-800"
-              }`}
-            >
-              {formatBillStatus(bill.status)}
-            </span>
+            <StatusBadge status={bill.status} />
           </section>
 
           {/* Bill Information Section */}
           <section className="card mt-8">
-            <h2 className="mb-5 border-b border-secondary pb-4 text-lg font-bold">
-              Bill Information
-            </h2>
+            <h2 className="section-title mb-5">Bill Information</h2>
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {infoFields.map(({ label, value }) => (
@@ -200,7 +180,9 @@ function BillDetailsPage() {
             {/* The finish panel shows the reason itself */}
             {bill.review_reason && !isUnfinished && (
               <div className="mt-6 border-t border-secondary pt-4">
-                <p className="text-sm text-gray-500">Review Comments / Reason</p>
+                <p className="text-sm text-gray-500">
+                  Review Comments / Reason
+                </p>
                 <p className="mt-1 text-sm text-gray-800 whitespace-pre-wrap">
                   {bill.review_reason}
                 </p>
@@ -211,7 +193,7 @@ function BillDetailsPage() {
           {/* Same helpers as right after upload, rebuilt from the saved bill */}
           {isUnfinished && (
             <section className="card mt-8">
-              <h2 className="text-lg font-bold">Finish this bill</h2>
+              <h2 className="section-title">Finish this bill</h2>
               <FinishBillPanel
                 key={`${bill.id}-${bill.status}`}
                 bill={bill}
