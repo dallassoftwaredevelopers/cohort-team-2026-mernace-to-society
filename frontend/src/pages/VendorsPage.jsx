@@ -2,15 +2,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import VendorForm from "../components/VendorForm";
+import VendorSummary from "../components/VendorSummary";
+import { useUserProfile } from "../hooks/useUserProfile";
+import { canManageRecords } from "../utils/permissions";
 import { useVendors } from "../hooks/useVendors";
 import { supabase } from "../../utils/supabase";
-
-const cards = [
-  { title: "Total Vendors", value: "0", note: "Across 0 service types" },
-  { title: "Vendor Accounts", value: "0", note: "Linked to 0 properties" },
-  { title: "Open Bills", value: "0", note: "From 0 vendors" },
-  { title: "Active Vendors", value: "0", note: "0 inactive" },
-];
 
 const serviceTypes = [
   "Electric",
@@ -63,7 +59,12 @@ function renderVendorCell(col, vendor, accountCount) {
 
 function VendorsPage() {
   const { vendors, loading, error, fetchVendors, deleteVendors } = useVendors();
+  const { profile } = useUserProfile();
+  const canEditRecords = canManageRecords(profile?.role);
 
+  const [openBillCount, setOpenBillCount] = useState(null);
+  const [isLoadingOpenBillCount, setIsLoadingOpenBillCount] = useState(true);
+  const [openBillCountError, setOpenBillCountError] = useState("");
   const [showVendorForm, setShowVendorForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -71,16 +72,86 @@ function VendorsPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [selectedVendorIds, setSelectedVendorIds] = useState(new Set());
   const [editVendorId, setEditVendorId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const unassignedVendors = vendors.filter(
+  const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+  const normalizedAccountSearchTerm = normalizedSearchTerm.replace(/\s/g, "");
+  const filteredVendors = vendors.filter((vendor) => {
+    if (!normalizedSearchTerm) return true;
+
+    return (
+      String(vendor.name ?? "")
+        .toLowerCase()
+        .includes(normalizedSearchTerm) ||
+      (vendor.aliases || []).some((alias) =>
+        String(alias).toLowerCase().includes(normalizedSearchTerm),
+      ) ||
+      (vendor.vendor_account || []).some(
+        (account) =>
+          String(account.service ?? "")
+            .toLowerCase()
+            .includes(normalizedSearchTerm) ||
+          String(account.account_number ?? "")
+            .replace(/\s/g, "")
+            .toLowerCase()
+            .includes(normalizedAccountSearchTerm),
+      )
+    );
+  });
+
+  const unassignedVendors = filteredVendors.filter(
     (vendor) => !(vendor.vendor_account || []).length,
   );
 
-  const allDisplayedVendors = vendors;
+  const allDisplayedVendors = filteredVendors;
 
   useEffect(() => {
     fetchVendors().catch(() => {});
   }, [fetchVendors]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadOpenBillCount() {
+      try {
+        const { count, error: queryError } = await supabase
+          .from("bill")
+          .select("id, vendor_account!inner(vendor_id)", {
+            count: "exact",
+            head: true,
+          })
+          .in("status", ["pending", "needs_review", "approved"]);
+
+        if (queryError) throw queryError;
+        if (count === null) {
+          throw new Error("Supabase did not return the open bill count.");
+        }
+
+        if (isMounted) {
+          setOpenBillCount(count);
+          setOpenBillCountError("");
+        }
+      } catch (caughtError) {
+        if (isMounted) {
+          setOpenBillCountError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Could not load open bills.",
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingOpenBillCount(false);
+        }
+      }
+    }
+
+    loadOpenBillCount();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   function closeVendorForm() {
     setShowVendorForm(false);
@@ -257,19 +328,40 @@ function VendorsPage() {
 
   const vendorsByService = serviceTypes.map((type) => ({
     type,
-    vendors: vendors.filter((vendor) =>
+    vendors: filteredVendors.filter((vendor) =>
       (vendor.vendor_account || []).some(
         (account) => account.service?.toLowerCase() === type.toLowerCase(),
       ),
     ),
   }));
 
+  const vendorAccountCount = vendors.reduce(
+    (total, vendor) => total + (vendor.vendor_account || []).length,
+    0,
+  );
+  const vendorsWithAccountsCount = vendors.filter(
+    (vendor) => (vendor.vendor_account || []).length > 0,
+  ).length;
+  const serviceTypeCount = new Set(
+    vendors.flatMap((vendor) =>
+      (vendor.vendor_account || [])
+        .map((account) => account.service?.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ).size;
+  const activeVendorCount = vendors.filter(
+    (vendor) => vendor.status === "active",
+  ).length;
+  const inactiveVendorCount = vendors.length - activeVendorCount;
+
   const tableHead = (
     <thead>
       <tr className="text-xs uppercase">
-        <th className="w-8 px-4 py-3 font-semibold">
-          <span className="sr-only">Select</span>
-        </th>
+        {canEditRecords && (
+          <th className="w-8 px-4 py-3 font-semibold">
+            <span className="sr-only">Select</span>
+          </th>
+        )}
 
         {columns.map((col) => (
           <th
@@ -280,9 +372,11 @@ function VendorsPage() {
           </th>
         ))}
 
-        <th className="hidden px-4 py-3 font-semibold md:table-cell">
-          Actions
-        </th>
+        {canEditRecords && (
+          <th className="hidden px-4 py-3 font-semibold md:table-cell">
+            Actions
+          </th>
+        )}
 
         <th className="w-8 md:hidden">
           <span className="sr-only">Open</span>
@@ -294,15 +388,17 @@ function VendorsPage() {
   function renderVendorRow(vendor, accountCount) {
     return (
       <tr key={vendor.id} className="border-t border-section">
-        <td className="px-4 py-3">
-          <input
-            type="checkbox"
-            checked={selectedVendorIds.has(vendor.id)}
-            onChange={() => toggleVendorSelection(vendor.id)}
-            className="h-4 w-4 cursor-pointer"
-            aria-label={`Select ${vendor.name}`}
-          />
-        </td>
+        {canEditRecords && (
+          <td className="px-4 py-3">
+            <input
+              type="checkbox"
+              checked={selectedVendorIds.has(vendor.id)}
+              onChange={() => toggleVendorSelection(vendor.id)}
+              className="h-4 w-4 cursor-pointer"
+              aria-label={`Select ${vendor.name}`}
+            />
+          </td>
+        )}
 
         {columns.map((col) => (
           <td key={col.key} className={`px-4 py-3 ${hideOnMobile(col)}`}>
@@ -310,20 +406,22 @@ function VendorsPage() {
           </td>
         ))}
 
-        <td className="hidden px-4 py-3 md:table-cell">
-          <button
-            type="button"
-            onClick={() => {
-              setFormError("");
-              setEditVendorId(vendor.id);
-              setShowVendorForm(true);
-            }}
-            className="cursor-pointer text-sm text-primary underline"
-            aria-label={`Edit ${vendor.name}`}
-          >
-            Edit
-          </button>
-        </td>
+        {canEditRecords && (
+          <td className="hidden px-4 py-3 md:table-cell">
+            <button
+              type="button"
+              onClick={() => {
+                setFormError("");
+                setEditVendorId(vendor.id);
+                setShowVendorForm(true);
+              }}
+              className="cursor-pointer text-sm text-primary underline"
+              aria-label={`Edit ${vendor.name}`}
+            >
+              Edit
+            </button>
+          </td>
+        )}
 
         <td className="pr-4 text-right md:hidden" aria-hidden="true">
           →
@@ -337,17 +435,26 @@ function VendorsPage() {
       <section className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="font-serif text-2xl font-bold">Vendors</h1>
 
-        <button
-          type="button"
-          onClick={() => {
-            setFormError("");
-            setShowVendorForm(true);
-          }}
-          className="btn-primary cursor-pointer px-5 py-3 text-sm"
-        >
-          + Add Vendor
-        </button>
+        {canEditRecords && (
+          <button
+            type="button"
+            onClick={() => {
+              setFormError("");
+              setShowVendorForm(true);
+            }}
+            className="btn-primary cursor-pointer px-5 py-3 text-sm"
+          >
+            + Add Vendor
+          </button>
+        )}
       </section>
+
+      {!canEditRecords && (
+        <p className="mt-4 text-sm text-gray-600">
+          You have read-only access to vendors. Contact a manager or
+          administrator to make changes.
+        </p>
+      )}
 
       {successMessage && (
         <p role="status" className="mt-4 text-sm text-green-700">
@@ -375,57 +482,72 @@ function VendorsPage() {
           id="vendor-search"
           type="search"
           placeholder="Search vendors"
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
           className="w-full rounded-lg border border-secondary px-4 py-3 text-sm md:max-w-sm"
         />
       </div>
 
-      <section className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
-        {cards.map(({ title, value, note }) => (
-          <div key={title} className="card">
-            <h3 className="text-sm font-semibold">{title}</h3>
-            <p className="mt-3 text-3xl font-bold">{value}</p>
-            {note && <p className="mt-1 text-xs">{note}</p>}
-          </div>
-        ))}
-      </section>
+      <VendorSummary
+        totalVendorCount={vendors.length}
+        vendorAccountCount={vendorAccountCount}
+        serviceTypeCount={serviceTypeCount}
+        vendorsWithAccountsCount={vendorsWithAccountsCount}
+        activeVendorCount={activeVendorCount}
+        inactiveVendorCount={inactiveVendorCount}
+        isLoadingVendors={loading}
+        vendorError={error}
+        openBillCount={openBillCount}
+        isLoadingOpenBillCount={isLoadingOpenBillCount}
+        openBillCountError={openBillCountError}
+      />
 
-      <div className="mt-6 flex flex-wrap items-center gap-4">
-        <button
-          type="button"
-          onClick={handleDeleteSelected}
-          disabled={selectedVendorIds.size === 0 || isDeleting}
-          className="btn-secondary w-full cursor-pointer px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-        >
-          {isDeleting
-            ? "Deleting..."
-            : `Delete Selected (${selectedVendorIds.size})`}
-        </button>
-      </div>
+      {canEditRecords && (
+        <div className="mt-6 flex flex-wrap items-center gap-4">
+          <button
+            type="button"
+            onClick={handleDeleteSelected}
+            disabled={selectedVendorIds.size === 0 || isDeleting}
+            className="btn-secondary w-full cursor-pointer px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+          >
+            {isDeleting
+              ? "Deleting..."
+              : `Delete Selected (${selectedVendorIds.size})`}
+          </button>
+        </div>
+      )}
 
       <section className="card mt-8">
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-black pb-4">
           <h2 className="text-lg font-bold">Vendors by Service Type</h2>
 
           <div className="flex items-center gap-4">
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={allSelected}
-                ref={(el) => {
-                  if (el) el.indeterminate = someSelected;
-                }}
-                onChange={toggleSelectAll}
-                className="h-4 w-4 cursor-pointer"
-              />
-              Select All
-            </label>
-
+            {canEditRecords && (
+              <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = someSelected;
+                  }}
+                  onChange={toggleSelectAll}
+                  className="h-4 w-4 cursor-pointer"
+                />
+                Select All
+              </label>
+            )}
             <span className="text-sm">{vendors.length} total vendors</span>
           </div>
         </div>
 
         {loading && vendors.length === 0 ? (
           <p className="mt-4 text-sm text-gray-600">Loading vendors…</p>
+        ) : filteredVendors.length === 0 ? (
+          <p className="mt-4 text-sm text-gray-600">
+            {normalizedSearchTerm
+              ? "No vendors match your search."
+              : "No vendors found."}
+          </p>
         ) : (
           <>
             {vendorsByService.map(({ type, vendors: typeVendors }) => (
@@ -443,7 +565,7 @@ function VendorsPage() {
                     {typeVendors.length === 0 ? (
                       <tr className="border-t border-section">
                         <td
-                          colSpan={columns.length + 3}
+                          colSpan={columns.length + (canEditRecords ? 3 : 1)}
                           className="px-4 py-3 text-gray-600"
                         >
                           No vendors for this service type.
@@ -489,7 +611,7 @@ function VendorsPage() {
         )}
       </section>
 
-      {showVendorForm && (
+      {canEditRecords && showVendorForm && (
         <VendorForm
           isSubmitting={isSubmitting}
           error={formError}

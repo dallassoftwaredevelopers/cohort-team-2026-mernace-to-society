@@ -4,6 +4,7 @@ import PropertyForm from "../components/PropertyForm";
 import { usePropertyDetails } from "../hooks/usePropertyDetails";
 import { useProperties } from "../hooks/useProperties";
 import { useUserProfile } from "../hooks/useUserProfile";
+import { canManageRecords } from "../utils/permissions";
 
 // Below md each row becomes a card with a label beside every value
 const stackedRowClassName =
@@ -27,7 +28,8 @@ function PropertyDetailsPage() {
   const { updateProperty } = useProperties();
 
   const { profile } = useUserProfile();
-  const canPay = ["manager", "admin"].includes(profile?.role?.toLowerCase());
+  const canEditRecords = canManageRecords(profile?.role);
+  const canPay = canEditRecords;
 
   const [showForm, setShowForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -99,7 +101,7 @@ function PropertyDetailsPage() {
           ← Back to Properties
         </button>
 
-        {property && !loading && !error && (
+        {canEditRecords && property && !loading && !error && (
           <button
             type="button"
             onClick={() => setShowForm(true)}
@@ -109,6 +111,13 @@ function PropertyDetailsPage() {
           </button>
         )}
       </div>
+
+      {!canEditRecords && (
+        <p className="mb-6 text-sm text-gray-600">
+          You have read-only access to this property. Contact a manager or
+          administrator to make changes.
+        </p>
+      )}
 
       {successMessage && (
         <div
@@ -220,10 +229,14 @@ function PropertyDetailsPage() {
 
               <button
                 type="button"
-                onClick={() => navigate("/bills/manual")}
+                onClick={() =>
+                  navigate(
+                    canEditRecords ? "/bills/manual" : "/bills/upload",
+                  )
+                }
                 className="btn-primary px-4 py-2 text-sm"
               >
-                + Add Bill
+                {canEditRecords ? "+ Add Bill" : "Upload Bill"}
               </button>
             </div>
 
@@ -323,7 +336,7 @@ function PropertyDetailsPage() {
       )}
 
       {/* Edit Property Modal */}
-      {showForm && property && (
+      {canEditRecords && showForm && property && (
         <PropertyForm
           key={property.id}
           initialValues={property}

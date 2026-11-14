@@ -2,11 +2,15 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import VendorForm from "../components/VendorForm";
 import { useVendorDetails } from "../hooks/useVendorDetails";
+import { useUserProfile } from "../hooks/useUserProfile";
+import { canManageRecords } from "../utils/permissions";
 import { supabase } from "../../utils/supabase";
 
 function VendorDetailsPage() {
 	const { vendorId } = useParams();
 	const navigate = useNavigate();
+	const { profile } = useUserProfile();
+	const canEditRecords = canManageRecords(profile?.role);
 	const {
 		vendor,
 		accounts,
@@ -85,6 +89,12 @@ function VendorDetailsPage() {
 					{successMessage}
 				</p>
 			)}
+			{!canEditRecords && (
+				<p className="mb-6 text-sm text-gray-600">
+					You have read-only access to this vendor. Contact a manager or
+					administrator to make changes.
+				</p>
+			)}
 
 			{loading ? (
 				<div className="py-16 text-center text-gray-600">
@@ -153,17 +163,19 @@ function VendorDetailsPage() {
 								Accounts associated with this vendor.
 							</p>
 							</div>
-							<button
-								type="button"
-								onClick={() => {
-									setAccountError("");
-									setSuccessMessage("");
-									setShowAddAccountForm(true);
-								}}
-								className="btn-primary px-4 py-2 text-sm"
-							>
-								+ Add Account
-							</button>
+							{canEditRecords && (
+								<button
+									type="button"
+									onClick={() => {
+										setAccountError("");
+										setSuccessMessage("");
+										setShowAddAccountForm(true);
+									}}
+									className="btn-primary px-4 py-2 text-sm"
+								>
+									+ Add Account
+								</button>
+							)}
 						</div>
 
 						{accounts.length === 0 ? (
@@ -213,7 +225,7 @@ function VendorDetailsPage() {
 				</>
 			)}
 
-			{showAddAccountForm && vendor && (
+			{canEditRecords && showAddAccountForm && vendor && (
 				<VendorForm
 					addAccountMode
 					vendorData={vendor}

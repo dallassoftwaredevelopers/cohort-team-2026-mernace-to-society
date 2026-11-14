@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PropertyForm from "../components/PropertyForm";
+import { useUserProfile } from "../hooks/useUserProfile";
+import { canManageRecords } from "../utils/permissions";
 import { useProperties } from "../hooks/useProperties";
 
 function PropertiesPage() {
@@ -15,6 +17,8 @@ function PropertiesPage() {
   } = useProperties();
 
   const navigate = useNavigate();
+  const { profile } = useUserProfile();
+  const canEditRecords = canManageRecords(profile?.role);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -181,13 +185,15 @@ function PropertiesPage() {
       <section className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="font-serif text-2xl font-bold">Properties</h1>
 
-        <button
-          type="button"
-          onClick={openAddForm}
-          className="btn-primary px-5 py-3 text-sm"
-        >
-          + Add Property
-        </button>
+        {canEditRecords && (
+          <button
+            type="button"
+            onClick={openAddForm}
+            className="btn-primary px-5 py-3 text-sm"
+          >
+            + Add Property
+          </button>
+        )}
       </section>
 
       {/* Dashboard Statistics */}
@@ -222,6 +228,13 @@ function PropertiesPage() {
       </section>
 
       {/* Messages */}
+      {!canEditRecords && (
+        <p className="mt-4 text-sm text-gray-600">
+          You have read-only access to properties. Contact a manager or
+          administrator to make changes.
+        </p>
+      )}
+
       {error && (
         <div
           role="alert"
@@ -296,15 +309,19 @@ function PropertiesPage() {
             <div className="py-10 text-center">
               <h3 className="font-semibold">No properties yet</h3>
               <p className="mt-2 text-sm">
-                Add your first property to get started.
+                {canEditRecords
+                  ? "Add your first property to get started."
+                  : "No properties are available. Contact a manager or administrator for help."}
               </p>
-              <button
-                type="button"
-                onClick={openAddForm}
-                className="btn-primary mt-4 px-5 py-2 text-sm"
-              >
-                Add Property
-              </button>
+              {canEditRecords && (
+                <button
+                  type="button"
+                  onClick={openAddForm}
+                  className="btn-primary mt-4 px-5 py-2 text-sm"
+                >
+                  Add Property
+                </button>
+              )}
             </div>
           ) : filteredCount === 0 ? (
             <div className="py-10 text-center text-gray-600">
@@ -328,9 +345,11 @@ function PropertiesPage() {
                       <th className="px-4 py-3 font-semibold">Property Name</th>
                       <th className="px-4 py-3 font-semibold">Address</th>
                       <th className="px-4 py-3 font-semibold">Status</th>
-                      <th className="px-4 py-3 text-right font-semibold">
-                        Actions
-                      </th>
+                      {canEditRecords && (
+                        <th className="px-4 py-3 text-right font-semibold">
+                          Actions
+                        </th>
+                      )}
                     </tr>
                   </thead>
 
@@ -373,23 +392,38 @@ function PropertiesPage() {
                           </td>
 
                           <td className="block py-2 md:table-cell md:px-4 md:py-3">
-                            <button
-                              type="button"
-                              onClick={() => handleStatusChange(property)}
-                              className={`rounded-full px-3 py-2 text-xs font-semibold transition-colors md:py-1 ${
-                                property.status === "active"
-                                  ? "bg-green-100 text-green-800 hover:bg-green-200"
-                                  : "bg-red-100 text-red-800 hover:bg-red-200"
-                              }`}
-                              title="Click to change status"
-                            >
-                              {property.status === "active"
-                                ? "Active"
-                                : "Inactive"}
-                            </button>
+                            {canEditRecords ? (
+                              <button
+                                type="button"
+                                onClick={() => handleStatusChange(property)}
+                                className={`rounded-full px-3 py-2 text-xs font-semibold transition-colors md:py-1 ${
+                                  property.status === "active"
+                                    ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                    : "bg-red-100 text-red-800 hover:bg-red-200"
+                                }`}
+                                title="Click to change status"
+                              >
+                                {property.status === "active"
+                                  ? "Active"
+                                  : "Inactive"}
+                              </button>
+                            ) : (
+                              <span
+                                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                  property.status === "active"
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
+                                }`}
+                              >
+                                {property.status === "active"
+                                  ? "Active"
+                                  : "Inactive"}
+                              </span>
+                            )}
                           </td>
 
-                          <td className="block pt-2 md:table-cell md:px-4 md:py-3">
+                          {canEditRecords && (
+                            <td className="block pt-2 md:table-cell md:px-4 md:py-3">
                             <div className="flex gap-2 md:justify-end">
                               <button
                                 type="button"
@@ -407,7 +441,8 @@ function PropertiesPage() {
                                 Delete
                               </button>
                             </div>
-                          </td>
+                            </td>
+                          )}
                         </tr>
                       );
                     })}
@@ -419,7 +454,7 @@ function PropertiesPage() {
         </div>
       </section>
 
-      {showForm && (
+      {canEditRecords && showForm && (
         <PropertyForm
           key={editingProperty?.id ?? "new-property"}
           initialValues={editingProperty ?? undefined}
