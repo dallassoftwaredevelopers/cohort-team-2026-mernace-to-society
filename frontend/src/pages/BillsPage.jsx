@@ -26,6 +26,7 @@ const stackedCellClassName =
 
 function formatBillStatus(status) {
   if (status === "needs_review") return "Needs Review";
+  if (status === "extraction_failed") return "Couldn't Read";
   return status;
 }
 
@@ -232,6 +233,7 @@ function BillsPage() {
               <option value="all">All Statuses</option>
               <option value="pending">Pending</option>
               <option value="needs_review">Needs Review</option>
+              <option value="extraction_failed">Couldn't Read</option>
               <option value="approved">Approved</option>
               <option value="paid">Paid</option>
               <option value="rejected">Rejected</option>
@@ -367,14 +369,25 @@ function BillsPage() {
                   </td>
                   <td className="block pt-2 md:table-cell md:px-4 md:py-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      {canEditRecords &&
-                        ["pending", "needs_review"].includes(bill.status) && (
+                      {canEditRecords && bill.status === "pending" && (
                         <button
                           type="button"
                           onClick={() => setEditingBill(bill)}
                           className="btn-secondary w-full px-4 py-2 text-xs md:w-auto md:bg-transparent md:p-0 md:text-sm md:font-medium md:text-primary md:hover:bg-transparent md:hover:text-primary-hover"
                         >
                           Edit
+                        </button>
+                      )}
+                      {/* Unfinished bills open their page, which has the
+                          add property / vendor account helpers */}
+                      {canEditRecords &&
+                        ["needs_review", "extraction_failed"].includes(bill.status) && (
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/bills/${bill.id}`)}
+                          className="btn-secondary w-full px-4 py-2 text-xs md:w-auto md:bg-transparent md:p-0 md:text-sm md:font-medium md:text-primary md:hover:bg-transparent md:hover:text-primary-hover"
+                        >
+                          Finish
                         </button>
                       )}
                       {canEditRecords && bill.status === "approved" && (

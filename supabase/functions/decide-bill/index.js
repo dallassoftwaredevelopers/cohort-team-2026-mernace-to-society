@@ -25,6 +25,18 @@ export default {
 			p_note: result.value.note,
 		});
 
+		// The bill table's CHECK (DC-93) refused: approving would leave a
+		// pending/approved bill without its account, amount or dates
+		if (error?.code === '23514') {
+			return Response.json(
+				{
+					error:
+						"This bill is missing details (vendor account, invoice number, amount or dates). Fix it before approving.",
+				},
+				{ status: 409 },
+			);
+		}
+
 		if (error) {
 			const status =
 				error.code === '42501'

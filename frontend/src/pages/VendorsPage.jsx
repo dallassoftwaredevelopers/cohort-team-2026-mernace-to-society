@@ -2,17 +2,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import VendorForm from "../components/VendorForm";
+import VendorSummary from "../components/VendorSummary";
 import { useUserProfile } from "../hooks/useUserProfile";
 import { canManageRecords } from "../utils/permissions";
 import { useVendors } from "../hooks/useVendors";
 import { supabase } from "../../utils/supabase";
-
-const cards = [
-  { title: "Total Vendors", value: "0", note: "Across 0 service types" },
-  { title: "Vendor Accounts", value: "0", note: "Linked to 0 properties" },
-  { title: "Open Bills", value: "0", note: "From 0 vendors" },
-  { title: "Active Vendors", value: "0", note: "0 inactive" },
-];
 
 const serviceTypes = [
   "Electric",
@@ -68,6 +62,9 @@ function VendorsPage() {
   const { profile } = useUserProfile();
   const canEditRecords = canManageRecords(profile?.role);
 
+  const [openBillCount, setOpenBillCount] = useState(null);
+  const [isLoadingOpenBillCount, setIsLoadingOpenBillCount] = useState(true);
+  const [openBillCountError, setOpenBillCountError] = useState("");
   const [showVendorForm, setShowVendorForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -75,16 +72,86 @@ function VendorsPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [selectedVendorIds, setSelectedVendorIds] = useState(new Set());
   const [editVendorId, setEditVendorId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const unassignedVendors = vendors.filter(
+  const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+  const normalizedAccountSearchTerm = normalizedSearchTerm.replace(/\s/g, "");
+  const filteredVendors = vendors.filter((vendor) => {
+    if (!normalizedSearchTerm) return true;
+
+    return (
+      String(vendor.name ?? "")
+        .toLowerCase()
+        .includes(normalizedSearchTerm) ||
+      (vendor.aliases || []).some((alias) =>
+        String(alias).toLowerCase().includes(normalizedSearchTerm),
+      ) ||
+      (vendor.vendor_account || []).some(
+        (account) =>
+          String(account.service ?? "")
+            .toLowerCase()
+            .includes(normalizedSearchTerm) ||
+          String(account.account_number ?? "")
+            .replace(/\s/g, "")
+            .toLowerCase()
+            .includes(normalizedAccountSearchTerm),
+      )
+    );
+  });
+
+  const unassignedVendors = filteredVendors.filter(
     (vendor) => !(vendor.vendor_account || []).length,
   );
 
-  const allDisplayedVendors = vendors;
+  const allDisplayedVendors = filteredVendors;
 
   useEffect(() => {
     fetchVendors().catch(() => {});
   }, [fetchVendors]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadOpenBillCount() {
+      try {
+        const { count, error: queryError } = await supabase
+          .from("bill")
+          .select("id, vendor_account!inner(vendor_id)", {
+            count: "exact",
+            head: true,
+          })
+          .in("status", ["pending", "needs_review", "approved"]);
+
+        if (queryError) throw queryError;
+        if (count === null) {
+          throw new Error("Supabase did not return the open bill count.");
+        }
+
+        if (isMounted) {
+          setOpenBillCount(count);
+          setOpenBillCountError("");
+        }
+      } catch (caughtError) {
+        if (isMounted) {
+          setOpenBillCountError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Could not load open bills.",
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingOpenBillCount(false);
+        }
+      }
+    }
+
+    loadOpenBillCount();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   function closeVendorForm() {
     setShowVendorForm(false);
@@ -261,12 +328,31 @@ function VendorsPage() {
 
   const vendorsByService = serviceTypes.map((type) => ({
     type,
-    vendors: vendors.filter((vendor) =>
+    vendors: filteredVendors.filter((vendor) =>
       (vendor.vendor_account || []).some(
         (account) => account.service?.toLowerCase() === type.toLowerCase(),
       ),
     ),
   }));
+
+  const vendorAccountCount = vendors.reduce(
+    (total, vendor) => total + (vendor.vendor_account || []).length,
+    0,
+  );
+  const vendorsWithAccountsCount = vendors.filter(
+    (vendor) => (vendor.vendor_account || []).length > 0,
+  ).length;
+  const serviceTypeCount = new Set(
+    vendors.flatMap((vendor) =>
+      (vendor.vendor_account || [])
+        .map((account) => account.service?.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ).size;
+  const activeVendorCount = vendors.filter(
+    (vendor) => vendor.status === "active",
+  ).length;
+  const inactiveVendorCount = vendors.length - activeVendorCount;
 
   const tableHead = (
     <thead>
@@ -396,19 +482,25 @@ function VendorsPage() {
           id="vendor-search"
           type="search"
           placeholder="Search vendors"
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
           className="w-full rounded-lg border border-secondary px-4 py-3 text-sm md:max-w-sm"
         />
       </div>
 
-      <section className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
-        {cards.map(({ title, value, note }) => (
-          <div key={title} className="card">
-            <h3 className="text-sm font-semibold">{title}</h3>
-            <p className="mt-3 text-3xl font-bold">{value}</p>
-            {note && <p className="mt-1 text-xs">{note}</p>}
-          </div>
-        ))}
-      </section>
+      <VendorSummary
+        totalVendorCount={vendors.length}
+        vendorAccountCount={vendorAccountCount}
+        serviceTypeCount={serviceTypeCount}
+        vendorsWithAccountsCount={vendorsWithAccountsCount}
+        activeVendorCount={activeVendorCount}
+        inactiveVendorCount={inactiveVendorCount}
+        isLoadingVendors={loading}
+        vendorError={error}
+        openBillCount={openBillCount}
+        isLoadingOpenBillCount={isLoadingOpenBillCount}
+        openBillCountError={openBillCountError}
+      />
 
       {canEditRecords && (
         <div className="mt-6 flex flex-wrap items-center gap-4">
@@ -450,6 +542,12 @@ function VendorsPage() {
 
         {loading && vendors.length === 0 ? (
           <p className="mt-4 text-sm text-gray-600">Loading vendors…</p>
+        ) : filteredVendors.length === 0 ? (
+          <p className="mt-4 text-sm text-gray-600">
+            {normalizedSearchTerm
+              ? "No vendors match your search."
+              : "No vendors found."}
+          </p>
         ) : (
           <>
             {vendorsByService.map(({ type, vendors: typeVendors }) => (

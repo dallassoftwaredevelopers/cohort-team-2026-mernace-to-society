@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import BillDetailsForm from "../components/BillDetailsForm";
+import FinishBillPanel from "../components/FinishBillPanel";
 import { supabase } from "../../utils/supabase";
 import { useUserProfile } from "../hooks/useUserProfile";
 import { canManageRecords } from "../utils/permissions";
@@ -11,8 +12,12 @@ const formatCurrency = (amount) =>
     currency: "USD",
   });
 
+// Saved bills that can't go to approval until someone fills in what's missing
+const UNFINISHED = ["needs_review", "extraction_failed"];
+
 function formatBillStatus(status) {
   if (status === "needs_review") return "Needs Review";
+  if (status === "extraction_failed") return "Couldn't Read";
   return status ? status.charAt(0).toUpperCase() + status.slice(1) : "—";
 }
 
@@ -73,7 +78,11 @@ function BillDetailsPage() {
   }, [billId]);
 
   async function handleBillSaved(updatedBill) {
-    setSuccessMessage("Bill updated successfully.");
+    setSuccessMessage(
+      updatedBill?.status === "pending"
+        ? "Bill saved and sent for approval."
+        : "Bill updated successfully."
+    );
     setShowEditForm(false);
     if (updatedBill) {
       // Re-fetch to get fresh joined relations
@@ -84,6 +93,7 @@ function BillDetailsPage() {
   const vendorName =
     bill?.vendor_account?.vendor?.name ||
     bill?.extracted_vendor_name ||
+    bill?.extracted_data?.vendor_name ||
     "—";
 
   const serviceName = bill?.vendor_account?.service;
@@ -100,8 +110,9 @@ function BillDetailsPage() {
     { label: "Status", value: formatBillStatus(bill?.status) },
   ];
 
-  const canEdit =
-    canEditRecords && bill && ["pending", "needs_review"].includes(bill.status);
+  // Unfinished bills get the finish panel below instead of the Edit modal
+  const isUnfinished = bill && UNFINISHED.includes(bill.status);
+  const canEdit = canEditRecords && bill?.status === "pending";
 
   return (
     <>
@@ -160,6 +171,8 @@ function BillDetailsPage() {
               className={`rounded-full px-3 py-1 text-sm font-semibold capitalize ${
                 bill.status === "paid"
                   ? "bg-green-100 text-green-800"
+                  : bill.status === "extraction_failed"
+                  ? "bg-red-100 text-red-800"
                   : bill.status === "needs_review"
                   ? "bg-yellow-100 text-yellow-800"
                   : "bg-blue-100 text-blue-800"
@@ -184,7 +197,8 @@ function BillDetailsPage() {
               ))}
             </div>
 
-            {bill.review_reason && (
+            {/* The finish panel shows the reason itself */}
+            {bill.review_reason && !isUnfinished && (
               <div className="mt-6 border-t border-secondary pt-4">
                 <p className="text-sm text-gray-500">Review Comments / Reason</p>
                 <p className="mt-1 text-sm text-gray-800 whitespace-pre-wrap">
@@ -193,6 +207,18 @@ function BillDetailsPage() {
               </div>
             )}
           </section>
+
+          {/* Same helpers as right after upload, rebuilt from the saved bill */}
+          {isUnfinished && (
+            <section className="card mt-8">
+              <h2 className="text-lg font-bold">Finish this bill</h2>
+              <FinishBillPanel
+                key={`${bill.id}-${bill.status}`}
+                bill={bill}
+                onSaved={handleBillSaved}
+              />
+            </section>
+          )}
         </>
       )}
 
