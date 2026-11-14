@@ -60,6 +60,21 @@ function getVendorName(bill) {
   return bill.vendor_account?.vendor?.name ?? bill.extracted_vendor_name ?? "—";
 }
 
+// What a bill still needs before it can be approved. Mirrors the bill table's
+// CHECK (DC-93), which is what actually enforces it.
+function missingForApproval(bill) {
+  return [
+    [bill.vendor_account, "vendor account"],
+    [bill.property, "property"],
+    [bill.invoice_number, "invoice number"],
+    [bill.amount != null, "amount"],
+    [bill.issue_date, "issue date"],
+    [bill.due_date, "due date"],
+  ]
+    .filter(([present]) => !present)
+    .map(([, label]) => label);
+}
+
 function formatBillStatus(status) {
   if (status === "needs_review") return "Needs Review";
   return status;
@@ -75,6 +90,11 @@ function ApprovalsPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [actionMessage, setActionMessage] = useState("");
   const [selectedBill, setSelectedBill] = useState(null);
+  // A failed approve/reject. Kept apart from errorMessage, which replaces the
+  // whole table and is only for "couldn't load the page".
+  const [decisionError, setDecisionError] = useState("");
+  const [fileError, setFileError] = useState("");
+  const [isOpeningFile, setIsOpeningFile] = useState(false);
   const [rejectionBill, setRejectionBill] = useState(null);
   const [rejectionReason, setRejectionReason] = useState("");
 
@@ -171,7 +191,7 @@ function ApprovalsPage() {
 
   async function submitDecision(bill, decision, note = null) {
     setIsSubmitting(true);
-    setErrorMessage("");
+    setDecisionError("");
     setActionMessage("");
     const { error } = await supabase.functions.invoke("decide-bill", {
       body: {
@@ -182,7 +202,10 @@ function ApprovalsPage() {
     });
 
     if (error) {
-      setErrorMessage(error.message || "Could not save the bill decision.");
+      // error.message is always the generic "non-2xx status code"; the real
+      // reason is the { error } on the response body
+      const details = await error.context?.json?.().catch(() => null);
+      setDecisionError(details?.error || "Could not save the bill decision.");
       setIsSubmitting(false);
       return false;
     }
@@ -199,6 +222,16 @@ function ApprovalsPage() {
   }
 
   async function handleApprove(bill) {
+    // The database refuses to approve an incomplete bill anyway (DC-93);
+    // checking here says exactly what's missing instead of failing
+    const missing = missingForApproval(bill);
+    if (missing.length > 0) {
+      setActionMessage("");
+      setDecisionError(
+        `Bill ${bill.invoice_number || "without an invoice number"} can't be approved yet. It's missing: ${missing.join(", ")}. Fix it on the bill's page first.`,
+      );
+      return;
+    }
     if (
       !window.confirm(
         `Approve bill ${bill.invoice_number || "without an invoice number"}?`,
@@ -207,6 +240,38 @@ function ApprovalsPage() {
       return;
     }
     await submitDecision(bill, "approved");
+  }
+
+  // Opens the uploaded file in a new tab with a link that expires in 5 minutes.
+  // Read straight from Supabase: storage and bill policies already decide who
+  // may see it, so no edge function is needed.
+  async function openOriginal(bill) {
+    setFileError("");
+    setIsOpeningFile(true);
+    // Opened before the awaits so the browser doesn't block it as a popup
+    const tab = window.open("", "_blank");
+    try {
+      const { data: row, error: rowError } = await supabase
+        .from("bill")
+        .select("file_path")
+        .eq("id", bill.id)
+        .single();
+      if (rowError) throw rowError;
+      if (!row?.file_path) throw new Error("This bill has no file attached.");
+
+      const { data, error } = await supabase.storage
+        .from("invoices")
+        .createSignedUrl(row.file_path, 300);
+      if (error) throw error;
+
+      if (tab) tab.location.href = data.signedUrl;
+      else window.location.assign(data.signedUrl);
+    } catch (err) {
+      tab?.close();
+      setFileError(err.message || "Could not open the original bill.");
+    } finally {
+      setIsOpeningFile(false);
+    }
   }
 
   async function handleReject(event) {
@@ -230,6 +295,14 @@ function ApprovalsPage() {
           className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-800"
         >
           {errorMessage}
+        </p>
+      )}
+      {decisionError && (
+        <p
+          role="alert"
+          className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-800"
+        >
+          {decisionError}
         </p>
       )}
       {actionMessage && (
@@ -486,7 +559,10 @@ function ApprovalsPage() {
               </h2>
               <button
                 type="button"
-                onClick={() => setSelectedBill(null)}
+                onClick={() => {
+                  setSelectedBill(null);
+                  setFileError("");
+                }}
                 className="cursor-pointer rounded-lg p-2 text-2xl leading-none text-gray-500 hover:text-black"
                 aria-label="Close details"
               >
@@ -514,6 +590,24 @@ function ApprovalsPage() {
                 </div>
               ))}
             </dl>
+            {/* Only uploaded bills have a file; check it against the numbers above */}
+            {selectedBill.source === "upload" && (
+              <div className="mt-6 border-t border-gray-200 pt-4">
+                <button
+                  type="button"
+                  onClick={() => openOriginal(selectedBill)}
+                  disabled={isOpeningFile}
+                  className="btn-secondary px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isOpeningFile ? "Opening…" : "View original bill"}
+                </button>
+                {fileError && (
+                  <p role="alert" className="mt-2 text-sm text-red-700">
+                    {fileError}
+                  </p>
+                )}
+              </div>
+            )}
             {selectedBill.status === "approved" && canApprove && (
               <div className="mt-6 flex justify-end border-t border-gray-200 pt-4">
                 <button
@@ -560,11 +654,20 @@ function ApprovalsPage() {
                 required
                 className="w-full rounded-md border border-gray-300 p-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
+              {/* Shown here too, since the page's message is behind this dialog */}
+              {decisionError && (
+                <p role="alert" className="text-sm text-red-700">
+                  {decisionError}
+                </p>
+              )}
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
                 <button
                   type="button"
                   disabled={isSubmitting}
-                  onClick={() => setRejectionBill(null)}
+                  onClick={() => {
+                    setRejectionBill(null);
+                    setDecisionError("");
+                  }}
                   className="btn-secondary cursor-pointer px-4 py-2 text-sm disabled:cursor-not-allowed"
                 >
                   Cancel
