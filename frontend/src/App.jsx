@@ -21,6 +21,7 @@ const VendorDetailsPage = lazy(() => import("./pages/VendorDetailsPage"));
 const ApprovalsPage = lazy(() => import("./pages/ApprovalsPage"));
 const AccountSettingsPage = lazy(() => import("./pages/AccountSettingsPage"));
 const FunctionTestPage = lazy(() => import("./pages/FunctionTestPage"));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
 
 // Shown for a moment while a page's code downloads
 function PageLoader() {
@@ -39,6 +40,7 @@ function App() {
           {/* Public pages: no sidebar */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/terms-of-service" element={<TermsOfServicePage />} />
           <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
 

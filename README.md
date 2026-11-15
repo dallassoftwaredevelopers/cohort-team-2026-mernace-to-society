@@ -274,6 +274,14 @@ npm run dev
 
 Open the URL Vite prints, typically <http://localhost:5173>.
 
+### 4. Log In Using Test Email
+
+Navigate to login
+email: test@example.com
+password: Password123$
+
+Enjoy!
+
 ## Useful Commands
 
 Run frontend commands from the repository root:
