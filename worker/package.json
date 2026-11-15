@@ -15,6 +15,7 @@
     "@openrouter/ai-sdk-provider": "^3.1.0",
     "@supabase/supabase-js": "^2.119.0",
     "ai": "^7.0.173",
-    "dotenv": "^18.0.10"
+    "dotenv": "^18.0.10",
+    "zod": "^4.6.7"
   }
 }
