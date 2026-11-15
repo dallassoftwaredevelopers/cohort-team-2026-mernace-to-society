@@ -4,6 +4,7 @@ import { formatBillStatus } from "../utils/format";
 const statusStyles = {
   pending: "bg-secondary text-black",
   needs_review: "bg-amber-100 text-amber-900",
+  extraction_failed: "bg-orange-100 text-orange-900",
   approved: "bg-blue-100 text-blue-800",
   paid: "bg-green-100 text-green-800",
   rejected: "bg-red-100 text-red-800",
