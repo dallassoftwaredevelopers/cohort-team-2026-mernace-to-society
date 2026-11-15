@@ -9,8 +9,7 @@ import { canManageTeam } from "../utils/permissions";
 
 const tabs = ["Profile", "Organization", "Payment Methods", "Team & Roles"];
 
-const inputClass =
-  "mt-1 w-full rounded-lg border border-secondary bg-white px-4 py-3 text-sm";
+const inputClass = "input";
 
 // Edge Function errors include the server response body with the user-facing message.
 async function getFunctionError(error, fallback) {
@@ -20,9 +19,24 @@ async function getFunctionError(error, fallback) {
 
 // Password changes use Supabase Auth; name and role are stored in the app profile.
 const passwordFields = [
-  { label: "Current Password", id: "current_password", autoComplete: "current-password", placeholder: "Enter your current password"},
-  { label: "New Password", id: "new_password", autoComplete: "new-password", placeholder: "Enter a new password"},
-  { label: "Confirm New Password", id: "confirm_new_password", autoComplete: "new-password", placeholder: "Re-enter your new password"},
+  {
+    label: "Current Password",
+    id: "current_password",
+    autoComplete: "current-password",
+    placeholder: "Enter your current password",
+  },
+  {
+    label: "New Password",
+    id: "new_password",
+    autoComplete: "new-password",
+    placeholder: "Enter a new password",
+  },
+  {
+    label: "Confirm New Password",
+    id: "confirm_new_password",
+    autoComplete: "new-password",
+    placeholder: "Re-enter your new password",
+  },
 ];
 
 // Organization form IDs map to the component state; request field names are mapped on save.
@@ -96,8 +110,13 @@ const roleDescriptions = [
 const hideOnMobile = (col) => (col.mobile ? "" : "hidden md:table-cell");
 
 function AccountSettingsPage() {
-  const { authUser, profile, isLoading: isProfileLoading, error: profileError, updateProfileName } =
-    useUserProfile();
+  const {
+    authUser,
+    profile,
+    isLoading: isProfileLoading,
+    error: profileError,
+    updateProfileName,
+  } = useUserProfile();
 
   // Each tab owns separate form state so unfinished settings don't overwrite saved profile data.
   const [activeTab, setActiveTab] = useState("Profile");
@@ -219,7 +238,9 @@ function AccountSettingsPage() {
       } catch (error) {
         if (isMounted) {
           setTeamMembersError(
-            error instanceof Error ? error.message : "Could not load team members.",
+            error instanceof Error
+              ? error.message
+              : "Could not load team members.",
           );
         }
       } finally {
@@ -251,7 +272,9 @@ function AccountSettingsPage() {
       setProfileSuccessMessage("Your profile has been updated.");
     } catch (error) {
       setProfileErrorMessage(
-        error instanceof Error ? error.message : "Could not update your profile.",
+        error instanceof Error
+          ? error.message
+          : "Could not update your profile.",
       );
     } finally {
       setIsUpdating(false);
@@ -265,7 +288,9 @@ function AccountSettingsPage() {
 
     // This is a UI guard; the Edge Function/database also enforce admin permission.
     if (!isOrganizationAdmin) {
-      setOrganizationError("Only organization admins can update these details.");
+      setOrganizationError(
+        "Only organization admins can update these details.",
+      );
       return;
     }
 
@@ -343,7 +368,9 @@ function AccountSettingsPage() {
       setTeamMembers(data.members);
     } catch (error) {
       setTeamMemberActionError(
-        error instanceof Error ? error.message : "Could not update member status.",
+        error instanceof Error
+          ? error.message
+          : "Could not update member status.",
       );
     } finally {
       setUpdatingTeamMemberId(null);
@@ -355,18 +382,20 @@ function AccountSettingsPage() {
     setPasswordError("");
     setPasswordSuccess("");
     setIsUpdating(true);
-  
+
     // Re-authenticate with the current password before accepting a new one.
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: user.email,
       password: passwords.current_password,
-    })
+    });
 
     if (signInError) {
       setPasswordError(
-        "Current password entry is incorrect. Please try again."
+        "Current password entry is incorrect. Please try again.",
       );
       setIsUpdating(false);
       return;
@@ -375,7 +404,7 @@ function AccountSettingsPage() {
     // Don't update Auth credentials unless both new-password fields agree.
     if (passwords.new_password !== passwords.confirm_new_password) {
       setPasswordError(
-        "New password and Confirm new password fields do not match. Please try again."
+        "New password and Confirm new password fields do not match. Please try again.",
       );
       setIsUpdating(false);
       return;
@@ -390,7 +419,11 @@ function AccountSettingsPage() {
       setPasswordError(updateError.message);
     } else {
       setPasswordSuccess("Your password has been updated.");
-      setPasswords({ current_password: "", new_password: "", confirm_new_password: ""});
+      setPasswords({
+        current_password: "",
+        new_password: "",
+        confirm_new_password: "",
+      });
     }
 
     setIsUpdating(false);
@@ -399,8 +432,8 @@ function AccountSettingsPage() {
   return (
     <>
       <section>
-        <h1 className="font-serif text-2xl font-bold">Account Settings</h1>
-        <p className="mt-2 text-sm">
+        <h1 className="page-title">Account Settings</h1>
+        <p className="page-subtitle">
           Manage your profile, organization, payment methods, and team.
         </p>
       </section>
@@ -428,9 +461,7 @@ function AccountSettingsPage() {
       {activeTab === "Profile" && (
         <>
           <section className="card mt-8">
-            <h2 className="border-b border-black pb-4 text-lg font-bold">
-              Profile
-            </h2>
+            <h2 className="section-title">Profile</h2>
 
             <form onSubmit={handleSaveProfile} className="mt-4">
               <div className="flex items-center gap-4">
@@ -449,24 +480,24 @@ function AccountSettingsPage() {
               </div>
 
               {profileError && (
-                <p role="alert" className="mt-4 text-sm text-red-700">
+                <p role="alert" className="alert-error mt-4">
                   {profileError}
                 </p>
               )}
               {profileErrorMessage && (
-                <p role="alert" className="mt-4 text-sm text-red-700">
+                <p role="alert" className="alert-error mt-4">
                   {profileErrorMessage}
                 </p>
               )}
               {profileSuccessMessage && (
-                <p role="status" className="mt-4 text-sm text-green-700">
+                <p role="status" className="alert-success mt-4">
                   {profileSuccessMessage}
                 </p>
               )}
 
               <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <label htmlFor="name" className="text-sm font-semibold">
+                  <label htmlFor="name" className="label">
                     Full Name
                   </label>
                   <input
@@ -484,7 +515,7 @@ function AccountSettingsPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="email" className="text-sm font-semibold">
+                  <label htmlFor="email" className="label">
                     Email
                   </label>
                   <input
@@ -509,9 +540,7 @@ function AccountSettingsPage() {
 
           {/* Password: managed by Supabase Auth, separate from the app profile row. */}
           <section className="card mt-8">
-            <h2 className="border-b border-black pb-4 text-lg font-bold">
-              Password
-            </h2>
+            <h2 className="section-title">Password</h2>
             <button
               type="button"
               onClick={() => setShowPasswordForm(!showPasswordForm)}
@@ -524,42 +553,49 @@ function AccountSettingsPage() {
             <div
               id="password-form"
               className={`grid transition-all duration-300 ease-in-out ${
-                showPasswordForm ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                showPasswordForm
+                  ? "grid-rows-[1fr] opacity-100"
+                  : "grid-rows-[0fr] opacity-0"
               }`}
               inert={!showPasswordForm}
             >
               <div className="overflow-hidden">
                 <form onSubmit={handleUpdatePassword} className="mt-4">
                   <div className="grid grid-cols-1 gap-4 md:w-1/2">
-                    {passwordFields.map(({ label, id, autoComplete, placeholder }) => (
-                      <div key={id}>
-                        <label htmlFor={id} className="text-sm font-semibold">
-                          {label}
-                        </label>
-                        <input
-                          id={id}
-                          type="password"
-                          autoComplete={autoComplete}
-                          placeholder={placeholder}
-                          value={passwords[id]}
-                          onChange={(e) =>
-                            setPasswords({...passwords, [id]: e.target.value})
-                          }
-                          required
-                          className={inputClass}
-                        />
-                      </div>
-                    ))}
+                    {passwordFields.map(
+                      ({ label, id, autoComplete, placeholder }) => (
+                        <div key={id}>
+                          <label htmlFor={id} className="label">
+                            {label}
+                          </label>
+                          <input
+                            id={id}
+                            type="password"
+                            autoComplete={autoComplete}
+                            placeholder={placeholder}
+                            value={passwords[id]}
+                            onChange={(e) =>
+                              setPasswords({
+                                ...passwords,
+                                [id]: e.target.value,
+                              })
+                            }
+                            required
+                            className={inputClass}
+                          />
+                        </div>
+                      ),
+                    )}
                   </div>
 
                   {passwordError && (
-                    <p role="alert" className="mt-4 text-sm text-red-600">
+                    <p role="alert" className="alert-error mt-4">
                       {passwordError}
                     </p>
                   )}
 
                   {passwordSuccess && (
-                    <p role="status" className="mt-4 text-sm text-green-700">
+                    <p role="status" className="alert-success mt-4">
                       {passwordSuccess}
                     </p>
                   )}
@@ -581,15 +617,13 @@ function AccountSettingsPage() {
       {/* Organization: loaded and saved through the organization-settings Edge Function. */}
       {activeTab === "Organization" && (
         <section className="card mt-8">
-          <h2 className="border-b border-black pb-4 text-lg font-bold">
-            Organization
-          </h2>
+          <h2 className="section-title">Organization</h2>
 
           <form onSubmit={handleSaveOrganization} className="mt-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {orgFields.map(({ label, id }) => (
                 <div key={id}>
-                  <label htmlFor={id} className="text-sm font-semibold">
+                  <label htmlFor={id} className="label">
                     {label}
                   </label>
                   <input
@@ -618,12 +652,12 @@ function AccountSettingsPage() {
               </p>
             )}
             {organizationError && (
-              <p role="alert" className="mt-4 text-sm text-red-700">
+              <p role="alert" className="alert-error mt-4">
                 {organizationError}
               </p>
             )}
             {organizationSuccess && (
-              <p role="status" className="mt-4 text-sm text-green-700">
+              <p role="status" className="alert-success mt-4">
                 {organizationSuccess}
               </p>
             )}
@@ -648,7 +682,7 @@ function AccountSettingsPage() {
         <>
           {/* Payment methods list — stacks into cards below md */}
           <section className="card mt-8">
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-black pb-4">
+            <div className="section-header">
               <div>
                 <h2 className="text-lg font-bold">Payment Methods</h2>
                 <p className="mt-1 text-sm">
@@ -733,64 +767,64 @@ function AccountSettingsPage() {
           {/* Add payment method form */}
           {isOrganizationAdmin && (
             <section id="add-method" className="card mt-8">
-            <h2 className="border-b border-black pb-4 text-lg font-bold">
-              Add Payment Method
-            </h2>
+              <h2 className="section-title">Add Payment Method</h2>
 
-            <form onSubmit={(e) => e.preventDefault()} className="mt-4">
-              <fieldset>
-                <legend className="text-sm font-semibold">Type</legend>
-                <div className="mt-2 flex flex-col gap-2 md:flex-row">
-                  {methodTypes.map(({ label, key }) => (
-                    <label
-                      key={key}
-                      className={`flex items-center gap-2 rounded-lg border bg-white px-4 py-3 text-sm ${
-                        methodType === key
-                          ? "border-primary"
-                          : "border-secondary"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="method_type"
-                        value={key}
-                        checked={methodType === key}
-                        onChange={() => setMethodType(key)}
-                      />
-                      {label}
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-
-              <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-                {fieldsByType[methodType].map(({ label, id, placeholder }) => (
-                  <div key={id}>
-                    <label htmlFor={id} className="text-sm font-semibold">
-                      {label}
-                    </label>
-                    <input
-                      id={id}
-                      type="text"
-                      placeholder={placeholder}
-                      className={inputClass}
-                    />
+              <form onSubmit={(e) => e.preventDefault()} className="mt-4">
+                <fieldset>
+                  <legend className="label">Type</legend>
+                  <div className="mt-2 flex flex-col gap-2 md:flex-row">
+                    {methodTypes.map(({ label, key }) => (
+                      <label
+                        key={key}
+                        className={`flex items-center gap-2 rounded-lg border bg-white px-4 py-3 text-sm ${
+                          methodType === key
+                            ? "border-primary"
+                            : "border-secondary"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="method_type"
+                          value={key}
+                          checked={methodType === key}
+                          onChange={() => setMethodType(key)}
+                        />
+                        {label}
+                      </label>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </fieldset>
 
-              <label className="mt-6 flex items-center gap-2 text-sm">
-                <input type="checkbox" name="is_default" />
-                Make this the default method
-              </label>
+                <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+                  {fieldsByType[methodType].map(
+                    ({ label, id, placeholder }) => (
+                      <div key={id}>
+                        <label htmlFor={id} className="label">
+                          {label}
+                        </label>
+                        <input
+                          id={id}
+                          type="text"
+                          placeholder={placeholder}
+                          className={inputClass}
+                        />
+                      </div>
+                    ),
+                  )}
+                </div>
 
-              <button
-                type="submit"
-                className="btn-primary mt-6 px-5 py-3 text-sm"
-              >
-                Save Method
-              </button>
-            </form>
+                <label className="mt-6 flex items-center gap-2 text-sm">
+                  <input type="checkbox" name="is_default" />
+                  Make this the default method
+                </label>
+
+                <button
+                  type="submit"
+                  className="btn-primary mt-6 px-5 py-3 text-sm"
+                >
+                  Save Method
+                </button>
+              </form>
             </section>
           )}
         </>
@@ -800,7 +834,7 @@ function AccountSettingsPage() {
       {activeTab === "Team & Roles" && (
         <>
           <section className="card mt-8">
-            <div className="border-b border-black pb-4">
+            <div className="border-b border-secondary pb-4">
               <h2 className="text-lg font-bold">Team Members</h2>
               <p className="mt-1 text-sm">
                 People in your organization and what they can do.
@@ -808,7 +842,7 @@ function AccountSettingsPage() {
             </div>
 
             {teamMemberActionError && (
-              <p className="mt-4 text-sm text-red-700" role="alert">
+              <p className="alert-error mt-4" role="alert">
                 {teamMemberActionError}
               </p>
             )}
@@ -834,9 +868,11 @@ function AccountSettingsPage() {
 
               <tbody>
                 {isLoadingTeamMembers && (
-                  <tr className="border-t border-section">
+                  <tr className="border-t border-secondary">
                     <td
-                      colSpan={teamColumns.length + (isOrganizationAdmin ? 1 : 0)}
+                      colSpan={
+                        teamColumns.length + (isOrganizationAdmin ? 1 : 0)
+                      }
                       className="px-4 py-4 text-center"
                     >
                       Loading team members...
@@ -844,9 +880,11 @@ function AccountSettingsPage() {
                   </tr>
                 )}
                 {!isLoadingTeamMembers && teamMembersError && (
-                  <tr className="border-t border-section">
+                  <tr className="border-t border-secondary">
                     <td
-                      colSpan={teamColumns.length + (isOrganizationAdmin ? 1 : 0)}
+                      colSpan={
+                        teamColumns.length + (isOrganizationAdmin ? 1 : 0)
+                      }
                       className="px-4 py-4 text-center text-red-700"
                       role="alert"
                     >
@@ -857,9 +895,11 @@ function AccountSettingsPage() {
                 {!isLoadingTeamMembers &&
                   !teamMembersError &&
                   teamMembers.length === 0 && (
-                    <tr className="border-t border-section">
+                    <tr className="border-t border-secondary">
                       <td
-                        colSpan={teamColumns.length + (isOrganizationAdmin ? 1 : 0)}
+                        colSpan={
+                          teamColumns.length + (isOrganizationAdmin ? 1 : 0)
+                        }
                         className="px-4 py-4 text-center"
                       >
                         No team members found.
@@ -869,7 +909,7 @@ function AccountSettingsPage() {
                 {!isLoadingTeamMembers &&
                   !teamMembersError &&
                   teamMembers.map((member) => (
-                    <tr key={member.id} className="border-t border-section">
+                    <tr key={member.id} className="border-t border-secondary">
                       {teamColumns.map((col) => (
                         <td
                           key={col.key}
@@ -903,7 +943,9 @@ function AccountSettingsPage() {
                               type="button"
                               className="btn-secondary px-3 py-2 text-xs"
                               disabled={updatingTeamMemberId === member.id}
-                              onClick={() => handleToggleTeamMemberStatus(member)}
+                              onClick={() =>
+                                handleToggleTeamMemberStatus(member)
+                              }
                             >
                               {updatingTeamMemberId === member.id
                                 ? "Saving..."
@@ -922,9 +964,7 @@ function AccountSettingsPage() {
 
           {/* Role descriptions */}
           <section className="card mt-8">
-            <h2 className="border-b border-black pb-4 text-lg font-bold">
-              Roles
-            </h2>
+            <h2 className="section-title">Roles</h2>
             <dl className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
               {roleDescriptions.map(({ role, note }) => (
                 <div key={role} className="rounded-lg bg-white p-4">
