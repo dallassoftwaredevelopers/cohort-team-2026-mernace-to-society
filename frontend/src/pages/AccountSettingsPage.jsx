@@ -1,3 +1,7 @@
+import ProfileSettings from "../components/ProfileSettings";
+import OrganizationSettings from "../components/OrganizationSettings";
+import PaymentMethodsSettings from "../components/PaymentMethodsSettings";
+import TeamRolesSettings from "../components/TeamRolesSettings";
 import { useEffect, useState } from "react";
 import { supabase } from "../../utils/supabase";
 import {
@@ -5,7 +9,6 @@ import {
   getInitials,
   useUserProfile,
 } from "../hooks/useUserProfile";
-import { canManageTeam } from "../utils/permissions";
 
 const tabs = ["Profile", "Organization", "Payment Methods", "Team & Roles"];
 
@@ -84,12 +87,11 @@ const fieldsByType = {
   ],
 };
 
-// Status is managed manually in public.user until team actions are implemented.
 const teamColumns = [
   { label: "Name", key: "name", mobile: true },
   { label: "Email", key: "email" },
   { label: "Role", key: "role", mobile: true },
-  { label: "Status", key: "status" },
+  { label: "Status", key: "status", mobile: true },
 ];
 
 const roleDescriptions = [
@@ -99,11 +101,11 @@ const roleDescriptions = [
   },
   {
     role: "Manager",
-    note: "Can edit bills, properties, and vendors, manage team members, and handle bill approvals.",
+    note: "Can edit bills, properties, and vendors, and handle bill approvals.",
   },
   {
     role: "Admin",
-    note: "Can edit bills, properties, and vendors, manage team members, and access organization settings.",
+    note: "Can edit bills, properties, and vendors, manage team members, and update organization settings.",
   },
 ];
 
@@ -149,12 +151,27 @@ function AccountSettingsPage() {
   const [isLoadingTeamMembers, setIsLoadingTeamMembers] = useState(false);
   const [teamMembersError, setTeamMembersError] = useState("");
   const [teamMemberActionError, setTeamMemberActionError] = useState("");
-  const [updatingTeamMemberId, setUpdatingTeamMemberId] = useState(null);
+  const [teamMemberSuccess, setTeamMemberSuccess] = useState("");
+  const [teamDrafts, setTeamDrafts] = useState({});
+  const [isSavingTeam, setIsSavingTeam] = useState(false);
+  const [showTeamReview, setShowTeamReview] = useState(false);
 
   const displayedName = profile?.name ?? "";
   const initials = getInitials(displayedName, authUser?.email);
   const isOrganizationAdmin = profile?.role?.toLowerCase() === "admin";
-  const canEditTeam = canManageTeam(profile?.role);
+  const canEditTeam = isOrganizationAdmin;
+  const pendingTeamChanges = teamMembers.flatMap((member) => {
+    const draft = teamDrafts[member.id];
+    if (!draft) return [];
+    const changes = {};
+    if (draft.role !== undefined && draft.role !== member.role?.toLowerCase()) {
+      changes.role = draft.role;
+    }
+    if (draft.status !== undefined && draft.status !== member.status) {
+      changes.status = draft.status;
+    }
+    return Object.keys(changes).length ? [{ member, changes }] : [];
+  });
 
   useEffect(() => {
     // Load organization details only when their tab is opened.
@@ -348,32 +365,58 @@ function AccountSettingsPage() {
     }
   }
 
-  async function handleToggleTeamMemberStatus(member) {
-    const nextStatus = member.status === "active" ? "inactive" : "active";
+  function updateTeamDraft(member, changes) {
     setTeamMemberActionError("");
-    setUpdatingTeamMemberId(member.id);
+    setTeamMemberSuccess("");
+    setTeamDrafts((current) => ({
+      ...current,
+      [member.id]: { ...current[member.id], ...changes },
+    }));
+  }
 
+  async function handleConfirmTeamChanges() {
+    setTeamMemberActionError("");
+    setTeamMemberSuccess("");
+    setIsSavingTeam(true);
+    let completed = 0;
     try {
-      const { data, error } = await supabase.functions.invoke("team-members", {
-        method: "PATCH",
-        body: { userId: member.id, status: nextStatus },
-      });
-      if (error) {
-        throw await getFunctionError(error, "Could not update member status.");
-      }
-      if (!Array.isArray(data?.members)) {
-        throw new Error("The server did not return the updated team list.");
-      }
+      for (const { member, changes } of pendingTeamChanges) {
+        const { data, error } = await supabase.functions.invoke(
+          "team-members",
+          {
+            method: "PATCH",
+            body: { userId: member.id, ...changes },
+          },
+        );
+        if (error) {
+          const cause = await getFunctionError(
+            error,
+            "Could not update team member.",
+          );
+          throw new Error(`${member.name || member.email}: ${cause.message}`);
+        }
+        if (!Array.isArray(data?.members)) {
+          throw new Error(
+            "The server did not return the updated team list. Reload before retrying.",
+          );
+        }
 
-      setTeamMembers(data.members);
+        setTeamMembers(data.members);
+        setTeamDrafts((current) => {
+          const next = { ...current };
+          delete next[member.id];
+          return next;
+        });
+        completed += 1;
+      }
+      setShowTeamReview(false);
+      setTeamMemberSuccess("Team changes saved.");
     } catch (error) {
       setTeamMemberActionError(
-        error instanceof Error
-          ? error.message
-          : "Could not update member status.",
+        `${completed ? `${completed} member update(s) saved. ` : ""}${error instanceof Error ? error.message : "Could not update team members."} Check remaining changes before retrying; the last update may have been applied.`,
       );
     } finally {
-      setUpdatingTeamMemberId(null);
+      setIsSavingTeam(false);
     }
   }
 
@@ -447,6 +490,7 @@ function AccountSettingsPage() {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
+            disabled={isSavingTeam}
             aria-pressed={activeTab === tab}
             className={`${
               activeTab === tab ? "btn-primary" : "btn-secondary"
@@ -457,524 +501,85 @@ function AccountSettingsPage() {
         ))}
       </nav>
 
-      {/* Profile: name can be changed here; email and role are display-only. */}
       {activeTab === "Profile" && (
-        <>
-          <section className="card mt-8">
-            <h2 className="section-title">Profile</h2>
-
-            <form onSubmit={handleSaveProfile} className="mt-4">
-              <div className="flex items-center gap-4">
-                <div
-                  className="flex h-14 w-14 items-center justify-center rounded-full bg-sidebar text-lg font-bold text-white"
-                  aria-hidden="true"
-                >
-                  {initials}
-                </div>
-                <div>
-                  <p className="font-semibold">
-                    {displayedName || authUser?.email || "Account"}
-                  </p>
-                  <p className="text-sm">{formatRole(profile?.role)}</p>
-                </div>
-              </div>
-
-              {profileError && (
-                <p role="alert" className="alert-error mt-4">
-                  {profileError}
-                </p>
-              )}
-              {profileErrorMessage && (
-                <p role="alert" className="alert-error mt-4">
-                  {profileErrorMessage}
-                </p>
-              )}
-              {profileSuccessMessage && (
-                <p role="status" className="alert-success mt-4">
-                  {profileSuccessMessage}
-                </p>
-              )}
-
-              <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label htmlFor="name" className="label">
-                    Full Name
-                  </label>
-                  <input
-                    id="name"
-                    type="text"
-                    value={name ?? profile?.name ?? ""}
-                    onChange={(event) => {
-                      setName(event.target.value);
-                      setProfileErrorMessage("");
-                      setProfileSuccessMessage("");
-                    }}
-                    disabled={isProfileLoading || !profile}
-                    required
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="email" className="label">
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    value={authUser?.email ?? profile?.email ?? ""}
-                    readOnly
-                    className={`${inputClass} bg-gray-100`}
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isProfileLoading || !profile || isUpdating}
-                className="btn-primary mt-6 px-5 py-3 text-sm disabled:opacity-50"
-              >
-                {isUpdating ? "Saving..." : "Save Profile"}
-              </button>
-            </form>
-          </section>
-
-          {/* Password: managed by Supabase Auth, separate from the app profile row. */}
-          <section className="card mt-8">
-            <h2 className="section-title">Password</h2>
-            <button
-              type="button"
-              onClick={() => setShowPasswordForm(!showPasswordForm)}
-              aria-expanded={showPasswordForm}
-              aria-controls="password-form"
-              className="btn-secondary mt-4 px-5 py-3 text-sm"
-            >
-              Change password
-            </button>
-            <div
-              id="password-form"
-              className={`grid transition-all duration-300 ease-in-out ${
-                showPasswordForm
-                  ? "grid-rows-[1fr] opacity-100"
-                  : "grid-rows-[0fr] opacity-0"
-              }`}
-              inert={!showPasswordForm}
-            >
-              <div className="overflow-hidden">
-                <form onSubmit={handleUpdatePassword} className="mt-4">
-                  <div className="grid grid-cols-1 gap-4 md:w-1/2">
-                    {passwordFields.map(
-                      ({ label, id, autoComplete, placeholder }) => (
-                        <div key={id}>
-                          <label htmlFor={id} className="label">
-                            {label}
-                          </label>
-                          <input
-                            id={id}
-                            type="password"
-                            autoComplete={autoComplete}
-                            placeholder={placeholder}
-                            value={passwords[id]}
-                            onChange={(e) =>
-                              setPasswords({
-                                ...passwords,
-                                [id]: e.target.value,
-                              })
-                            }
-                            required
-                            className={inputClass}
-                          />
-                        </div>
-                      ),
-                    )}
-                  </div>
-
-                  {passwordError && (
-                    <p role="alert" className="alert-error mt-4">
-                      {passwordError}
-                    </p>
-                  )}
-
-                  {passwordSuccess && (
-                    <p role="status" className="alert-success mt-4">
-                      {passwordSuccess}
-                    </p>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={isUpdating}
-                    className="btn-primary mt-6 px-5 py-3 text-sm disabled:opacity-50"
-                  >
-                    {isUpdating ? "Updating..." : "Update password"}
-                  </button>
-                </form>
-              </div>
-            </div>
-          </section>
-        </>
+        <ProfileSettings
+          handleSaveProfile={handleSaveProfile}
+          initials={initials}
+          displayedName={displayedName}
+          authUser={authUser}
+          profile={profile}
+          profileError={profileError}
+          profileErrorMessage={profileErrorMessage}
+          profileSuccessMessage={profileSuccessMessage}
+          name={name}
+          setName={setName}
+          setProfileErrorMessage={setProfileErrorMessage}
+          setProfileSuccessMessage={setProfileSuccessMessage}
+          isProfileLoading={isProfileLoading}
+          isUpdating={isUpdating}
+          showPasswordForm={showPasswordForm}
+          setShowPasswordForm={setShowPasswordForm}
+          handleUpdatePassword={handleUpdatePassword}
+          passwordFields={passwordFields}
+          passwords={passwords}
+          setPasswords={setPasswords}
+          passwordError={passwordError}
+          passwordSuccess={passwordSuccess}
+          inputClass={inputClass}
+          formatRole={formatRole}
+        />
       )}
 
-      {/* Organization: loaded and saved through the organization-settings Edge Function. */}
       {activeTab === "Organization" && (
-        <section className="card mt-8">
-          <h2 className="section-title">Organization</h2>
-
-          <form onSubmit={handleSaveOrganization} className="mt-4">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {orgFields.map(({ label, id }) => (
-                <div key={id}>
-                  <label htmlFor={id} className="label">
-                    {label}
-                  </label>
-                  <input
-                    id={id}
-                    type="text"
-                    value={organization[id]}
-                    onChange={(event) => {
-                      setOrganization((current) => ({
-                        ...current,
-                        [id]: event.target.value,
-                      }));
-                      setOrganizationError("");
-                      setOrganizationSuccess("");
-                    }}
-                    disabled={isLoadingOrganization || !isOrganizationAdmin}
-                    required={id === "org_name"}
-                    className={inputClass}
-                  />
-                </div>
-              ))}
-            </div>
-
-            {!isOrganizationAdmin && (
-              <p className="mt-4 text-sm text-gray-600">
-                Only organization admins can edit these details.
-              </p>
-            )}
-            {organizationError && (
-              <p role="alert" className="alert-error mt-4">
-                {organizationError}
-              </p>
-            )}
-            {organizationSuccess && (
-              <p role="status" className="alert-success mt-4">
-                {organizationSuccess}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={
-                isLoadingOrganization ||
-                isSavingOrganization ||
-                !isOrganizationAdmin
-              }
-              className="btn-primary mt-6 px-5 py-3 text-sm disabled:opacity-50"
-            >
-              {isSavingOrganization ? "Saving..." : "Save Organization"}
-            </button>
-          </form>
-        </section>
+        <OrganizationSettings
+          handleSaveOrganization={handleSaveOrganization}
+          orgFields={orgFields}
+          organization={organization}
+          setOrganization={setOrganization}
+          setOrganizationError={setOrganizationError}
+          setOrganizationSuccess={setOrganizationSuccess}
+          isLoadingOrganization={isLoadingOrganization}
+          isOrganizationAdmin={isOrganizationAdmin}
+          organizationError={organizationError}
+          organizationSuccess={organizationSuccess}
+          isSavingOrganization={isSavingOrganization}
+          inputClass={inputClass}
+        />
       )}
 
-      {/* Payment Methods: presentation-only until persistence is implemented. */}
       {activeTab === "Payment Methods" && (
-        <>
-          {/* Payment methods list — stacks into cards below md */}
-          <section className="card mt-8">
-            <div className="section-header">
-              <div>
-                <h2 className="text-lg font-bold">Payment Methods</h2>
-                <p className="mt-1 text-sm">
-                  The accounts your organization pays bills from. Each vendor
-                  account picks one of these.
-                </p>
-              </div>
-              {isOrganizationAdmin && (
-                <a href="#add-method" className="btn-primary px-5 py-3 text-sm">
-                  + Add Payment Method
-                </a>
-              )}
-            </div>
-
-            {!isOrganizationAdmin && (
-              <p className="mt-4 text-sm text-gray-600">
-                Only organization admins can manage payment methods.
-              </p>
-            )}
-
-            <table className="mt-4 w-full text-left text-sm">
-              <thead className="hidden md:table-header-group">
-                <tr className="text-xs uppercase">
-                  {paymentColumns.map((col) => (
-                    <th key={col.key} className="px-4 py-3 font-semibold">
-                      {col.label}
-                    </th>
-                  ))}
-                  {isOrganizationAdmin && (
-                    <th className="px-4 py-3 text-right font-semibold">
-                      Actions
-                    </th>
-                  )}
-                </tr>
-              </thead>
-
-              <tbody className="block md:table-row-group">
-                {/* Placeholder row — replace with mapped payment method data later */}
-                <tr className="mb-4 block rounded-lg bg-white p-4 md:mb-0 md:table-row md:bg-transparent md:p-0">
-                  {paymentColumns.map((col) => (
-                    <td
-                      key={col.key}
-                      className="flex justify-between py-1 md:table-cell md:px-4 md:py-4"
-                    >
-                      <span className="font-semibold md:hidden">
-                        {col.label}
-                      </span>
-                      {col.key === "status" ? (
-                        <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold">
-                          Active
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                  ))}
-                  {isOrganizationAdmin && (
-                    <td className="block pt-3 md:table-cell md:px-4 md:py-4">
-                      <div className="flex gap-2 md:justify-end">
-                        <button className="btn-secondary flex-1 px-4 py-2 text-xs md:flex-none">
-                          Make Default
-                        </button>
-                        <button className="btn-secondary flex-1 px-4 py-2 text-xs md:flex-none">
-                          Edit
-                        </button>
-                        <button className="btn-secondary flex-1 px-4 py-2 text-xs md:flex-none">
-                          Remove
-                        </button>
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              </tbody>
-            </table>
-
-            <p className="mt-4 text-xs">
-              A method still used by vendor accounts can't be removed until
-              those accounts are switched to another method.
-            </p>
-          </section>
-
-          {/* Add payment method form */}
-          {isOrganizationAdmin && (
-            <section id="add-method" className="card mt-8">
-              <h2 className="section-title">Add Payment Method</h2>
-
-              <form onSubmit={(e) => e.preventDefault()} className="mt-4">
-                <fieldset>
-                  <legend className="label">Type</legend>
-                  <div className="mt-2 flex flex-col gap-2 md:flex-row">
-                    {methodTypes.map(({ label, key }) => (
-                      <label
-                        key={key}
-                        className={`flex items-center gap-2 rounded-lg border bg-white px-4 py-3 text-sm ${
-                          methodType === key
-                            ? "border-primary"
-                            : "border-secondary"
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="method_type"
-                          value={key}
-                          checked={methodType === key}
-                          onChange={() => setMethodType(key)}
-                        />
-                        {label}
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-
-                <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-                  {fieldsByType[methodType].map(
-                    ({ label, id, placeholder }) => (
-                      <div key={id}>
-                        <label htmlFor={id} className="label">
-                          {label}
-                        </label>
-                        <input
-                          id={id}
-                          type="text"
-                          placeholder={placeholder}
-                          className={inputClass}
-                        />
-                      </div>
-                    ),
-                  )}
-                </div>
-
-                <label className="mt-6 flex items-center gap-2 text-sm">
-                  <input type="checkbox" name="is_default" />
-                  Make this the default method
-                </label>
-
-                <button
-                  type="submit"
-                  className="btn-primary mt-6 px-5 py-3 text-sm"
-                >
-                  Save Method
-                </button>
-              </form>
-            </section>
-          )}
-        </>
+        <PaymentMethodsSettings
+          isOrganizationAdmin={isOrganizationAdmin}
+          paymentColumns={paymentColumns}
+          methodTypes={methodTypes}
+          methodType={methodType}
+          setMethodType={setMethodType}
+          fieldsByType={fieldsByType}
+          inputClass={inputClass}
+        />
       )}
 
-      {/* Team & Roles: members load from the authenticated team-members Edge Function. */}
       {activeTab === "Team & Roles" && (
-        <>
-          <section className="card mt-8">
-            <div className="border-b border-secondary pb-4">
-              <h2 className="text-lg font-bold">Team Members</h2>
-              <p className="mt-1 text-sm">
-                People in your organization and what they can do.
-              </p>
-            </div>
-
-            {teamMemberActionError && (
-              <p className="alert-error mt-4" role="alert">
-                {teamMemberActionError}
-              </p>
-            )}
-
-            <table className="mt-4 w-full rounded-lg bg-white text-left text-sm">
-              <thead>
-                <tr className="text-xs uppercase">
-                  {teamColumns.map((col) => (
-                    <th
-                      key={col.key}
-                      className={`px-4 py-3 font-semibold ${hideOnMobile(col)}`}
-                    >
-                      {col.label}
-                    </th>
-                  ))}
-                  {isOrganizationAdmin && (
-                    <th className="px-4 py-3 text-right font-semibold">
-                      Actions
-                    </th>
-                  )}
-                </tr>
-              </thead>
-
-              <tbody>
-                {isLoadingTeamMembers && (
-                  <tr className="border-t border-secondary">
-                    <td
-                      colSpan={
-                        teamColumns.length + (isOrganizationAdmin ? 1 : 0)
-                      }
-                      className="px-4 py-4 text-center"
-                    >
-                      Loading team members...
-                    </td>
-                  </tr>
-                )}
-                {!isLoadingTeamMembers && teamMembersError && (
-                  <tr className="border-t border-secondary">
-                    <td
-                      colSpan={
-                        teamColumns.length + (isOrganizationAdmin ? 1 : 0)
-                      }
-                      className="px-4 py-4 text-center text-red-700"
-                      role="alert"
-                    >
-                      {teamMembersError}
-                    </td>
-                  </tr>
-                )}
-                {!isLoadingTeamMembers &&
-                  !teamMembersError &&
-                  teamMembers.length === 0 && (
-                    <tr className="border-t border-secondary">
-                      <td
-                        colSpan={
-                          teamColumns.length + (isOrganizationAdmin ? 1 : 0)
-                        }
-                        className="px-4 py-4 text-center"
-                      >
-                        No team members found.
-                      </td>
-                    </tr>
-                  )}
-                {!isLoadingTeamMembers &&
-                  !teamMembersError &&
-                  teamMembers.map((member) => (
-                    <tr key={member.id} className="border-t border-secondary">
-                      {teamColumns.map((col) => (
-                        <td
-                          key={col.key}
-                          className={`px-4 py-3 ${hideOnMobile(col)}`}
-                        >
-                          {col.key === "status" ? (
-                            <span
-                              className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                member.status === "active"
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-secondary text-gray-700"
-                              }`}
-                            >
-                              {formatRole(member.status)}
-                            </span>
-                          ) : col.key === "role" ? (
-                            formatRole(member.role)
-                          ) : (
-                            member[col.key] || "—"
-                          )}
-                        </td>
-                      ))}
-                      {isOrganizationAdmin && (
-                        <td className="px-4 py-3 text-right">
-                          {member.id === authUser?.id ? (
-                            <span className="text-xs text-gray-500">
-                              Your account
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              className="btn-secondary px-3 py-2 text-xs"
-                              disabled={updatingTeamMemberId === member.id}
-                              onClick={() =>
-                                handleToggleTeamMemberStatus(member)
-                              }
-                            >
-                              {updatingTeamMemberId === member.id
-                                ? "Saving..."
-                                : member.status === "active"
-                                  ? "Set inactive"
-                                  : "Set active"}
-                            </button>
-                          )}
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </section>
-
-          {/* Role descriptions */}
-          <section className="card mt-8">
-            <h2 className="section-title">Roles</h2>
-            <dl className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-              {roleDescriptions.map(({ role, note }) => (
-                <div key={role} className="rounded-lg bg-white p-4">
-                  <dt className="font-semibold">{role}</dt>
-                  <dd className="mt-1 text-sm">{note}</dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-        </>
+        <TeamRolesSettings
+          teamMemberActionError={teamMemberActionError}
+          teamMemberSuccess={teamMemberSuccess}
+          teamColumns={teamColumns}
+          hideOnMobile={hideOnMobile}
+          canEditTeam={canEditTeam}
+          isLoadingTeamMembers={isLoadingTeamMembers}
+          teamMembersError={teamMembersError}
+          teamMembers={teamMembers}
+          formatRole={formatRole}
+          authUser={authUser}
+          teamDrafts={teamDrafts}
+          updateTeamDraft={updateTeamDraft}
+          pendingTeamChanges={pendingTeamChanges}
+          showTeamReview={showTeamReview}
+          setShowTeamReview={setShowTeamReview}
+          isSavingTeam={isSavingTeam}
+          handleConfirmTeamChanges={handleConfirmTeamChanges}
+          roleDescriptions={roleDescriptions}
+        />
       )}
     </>
   );

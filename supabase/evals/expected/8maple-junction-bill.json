@@ -1,0 +1,22 @@
+{
+	"vendor_name": "Maple Junction Storage",
+	"account_number": "2000456708",
+	"invoice_number": "BILL-1001",
+	"amount": 168.79,
+	"issue_date": "2026-10-02",
+	"due_date": "2026-10-16",
+	"customer_name": "Maple Junction Books",
+	"service_address": {
+		"street": "125 Industrial Way",
+		"city": "Springfield",
+		"state": "IL",
+		"zip": "62701"
+	},
+	"portal_url": "https://maple-junction-utility-demo.vercel.app",
+	"line_items": [
+		{
+			"description": "Monthly commercial storage unit rental",
+			"amount": 168.79
+		}
+	]
+}

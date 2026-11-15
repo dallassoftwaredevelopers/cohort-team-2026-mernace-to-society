@@ -1,0 +1,22 @@
+{
+	"vendor_name": "Alder Creek Landscaping",
+	"account_number": "2000456700",
+	"invoice_number": "BILL-1001",
+	"amount": 186.42,
+	"issue_date": "2026-10-02",
+	"due_date": "2026-10-16",
+	"customer_name": "Alder Creek Workshop",
+	"service_address": {
+		"street": "125 Industrial Way",
+		"city": "Springfield",
+		"state": "IL",
+		"zip": "62701"
+	},
+	"portal_url": "https://alder-creek-utility-demo.vercel.app",
+	"line_items": [
+		{
+			"description": "Monthly grounds maintenance - mowing and edging",
+			"amount": 186.42
+		}
+	]
+}

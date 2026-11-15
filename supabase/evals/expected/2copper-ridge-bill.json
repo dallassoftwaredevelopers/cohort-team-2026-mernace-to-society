@@ -1,0 +1,22 @@
+{
+	"vendor_name": "Copper Ridge Waste Services",
+	"account_number": "2000456702",
+	"invoice_number": "BILL-1001",
+	"amount": 518.7,
+	"issue_date": "2026-10-02",
+	"due_date": "2026-10-16",
+	"customer_name": "Copper Ridge Fabrication",
+	"service_address": {
+		"street": "125 Industrial Way",
+		"city": "Springfield",
+		"state": "IL",
+		"zip": "62701"
+	},
+	"portal_url": "https://copper-ridge-utility-demo.vercel.app",
+	"line_items": [
+		{
+			"description": "Commercial waste collection - four weekly pickups",
+			"amount": 518.7
+		}
+	]
+}

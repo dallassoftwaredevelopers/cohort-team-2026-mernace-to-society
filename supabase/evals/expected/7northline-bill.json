@@ -1,0 +1,22 @@
+{
+	"vendor_name": "Northline",
+	"account_number": "2000456703",
+	"invoice_number": "BILL-1001",
+	"amount": 279.95,
+	"issue_date": "2026-10-02",
+	"due_date": "2026-10-16",
+	"customer_name": "Northline Logistics",
+	"service_address": {
+		"street": "125 Industrial Way",
+		"city": "Springfield",
+		"state": "IL",
+		"zip": "62701"
+	},
+	"portal_url": "https://northline-utility-demo.vercel.app",
+	"line_items": [
+		{
+			"description": "Northline Business Internet Business fiber internet - monthly plan",
+			"amount": 279.95
+		}
+	]
+}
