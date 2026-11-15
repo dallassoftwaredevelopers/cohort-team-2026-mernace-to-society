@@ -1,0 +1,22 @@
+{
+	"vendor_name": "Prairie Grid HVAC Services",
+	"account_number": "2000456707",
+	"invoice_number": "BILL-1001",
+	"amount": 461.33,
+	"issue_date": "2026-10-02",
+	"due_date": "2026-10-16",
+	"customer_name": "Prairie Grid Supply",
+	"service_address": {
+		"street": "125 Industrial Way",
+		"city": "Springfield",
+		"state": "IL",
+		"zip": "62701"
+	},
+	"portal_url": "https://prairie-grid-utility-demo.vercel.app",
+	"line_items": [
+		{
+			"description": "HVAC preventive maintenance and filter replacement",
+			"amount": 461.33
+		}
+	]
+}

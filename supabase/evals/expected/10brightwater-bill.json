@@ -1,0 +1,22 @@
+{
+	"vendor_name": "Brightwater Water & Sewer",
+	"account_number": "2000456701",
+	"invoice_number": "BILL-1001",
+	"amount": 324.16,
+	"issue_date": "2026-10-02",
+	"due_date": "2026-10-16",
+	"customer_name": "Brightwater Print Studio",
+	"service_address": {
+		"street": "125 Industrial Way",
+		"city": "Springfield",
+		"state": "IL",
+		"zip": "62701"
+	},
+	"portal_url": "https://brightwater-utility-demo.vercel.app",
+	"line_items": [
+		{
+			"description": "Monthly water usage and sewer service",
+			"amount": 324.16
+		}
+	]
+}

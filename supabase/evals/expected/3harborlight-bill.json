@@ -1,0 +1,30 @@
+{
+	"vendor_name": "Harborlight Security",
+	"account_number": "2000456706",
+	"invoice_number": "BILL-1001",
+	"amount": 392.08,
+	"issue_date": "2026-10-02",
+	"due_date": "2026-10-16",
+	"customer_name": "Harborlight Design Co.",
+	"service_address": {
+		"street": "125 Industrial Way",
+		"city": "Springfield",
+		"state": "IL",
+		"zip": "62701"
+	},
+	"portal_url": "https://harborlight-utility-demo.vercel.app",
+	"line_items": [
+		{
+			"description": "Amount assessed",
+			"amount": 392.08
+		},
+		{
+			"description": "Receipts applied",
+			"amount": 0
+		},
+		{
+			"description": "Net to remit",
+			"amount": 392.08
+		}
+	]
+}

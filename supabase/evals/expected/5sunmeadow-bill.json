@@ -1,0 +1,22 @@
+{
+	"vendor_name": "Sunmeadow Cleaning",
+	"account_number": "2000456704",
+	"invoice_number": "BILL-1001",
+	"amount": 143.28,
+	"issue_date": "2026-10-02",
+	"due_date": "2026-10-16",
+	"customer_name": "Sunmeadow Bakery",
+	"service_address": {
+		"street": "125 Industrial Way",
+		"city": "Springfield",
+		"state": "IL",
+		"zip": "62701"
+	},
+	"portal_url": "https://sunmeadow-utility-demo.vercel.app",
+	"line_items": [
+		{
+			"description": "Office cleaning - monthly janitorial service",
+			"amount": 143.28
+		}
+	]
+}

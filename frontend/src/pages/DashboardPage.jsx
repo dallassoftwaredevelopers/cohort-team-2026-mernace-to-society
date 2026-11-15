@@ -1,5 +1,6 @@
 import PropertyForm from "../components/PropertyForm";
 import VendorForm from "../components/VendorForm";
+import BillsSummary from "../components/BillsSummary";
 import RecentBills from "../components/RecentBills";
 import { useProperties } from "../hooks/useProperties";
 import { supabase } from "../../utils/supabase";
@@ -7,13 +8,6 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUserProfile } from "../hooks/useUserProfile";
 import { canManageRecords } from "../utils/permissions";
-
-const cards = [
-  { title: "Bills to Review", value: "0" },
-  { title: "Outstanding / Due Soon", value: "$0", note: "0 bills due" },
-  { title: "Paid This Month", value: "$0", note: "0 bills paid" },
-  { title: "Monthly Spending Total", value: "$0" },
-];
 
 function DashboardPage() {
   const [open, setOpen] = useState(false);
@@ -110,10 +104,10 @@ function DashboardPage() {
     <>
       <section className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-serif text-2xl font-bold">
+          <h1 className="page-title">
             Welcome Back, {profile?.name || authUser?.email || "there"}
           </h1>
-          <p className="mt-2 text-sm">
+          <p className="page-subtitle">
             Review pending property bills, track expenses, and record payments.
           </p>
         </div>
@@ -128,7 +122,7 @@ function DashboardPage() {
               + Add Bill ▾
             </button>
             {open && (
-              <div className="absolute left-0 z-10 mt-2 w-48 rounded-lg border border-secondary bg-white py-2 shadow-lg sm:left-auto sm:right-0">
+              <div className="absolute left-0 z-10 mt-2 w-48 rounded-lg border border-secondary bg-white py-2 shadow-lg">
                 {(canEditRecords
                   ? [
                       { label: "Enter Manually", path: "/bills/manual" },
@@ -179,21 +173,12 @@ function DashboardPage() {
       </section>
 
       {successMessage && (
-        <p role="status" className="mt-4 text-sm text-green-700">
+        <p role="status" className="alert-success mt-4">
           {successMessage}
         </p>
       )}
 
-      {/* Summary cards */}
-      <section className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
-        {cards.map(({ title, value, note }) => (
-          <div key={title} className="card">
-            <h3 className="text-sm font-semibold">{title}</h3>
-            <p className="mt-3 text-2xl font-bold md:text-3xl">{value}</p>
-            {note && <p className="mt-1 text-xs">{note}</p>}
-          </div>
-        ))}
-      </section>
+      <BillsSummary />
 
       {/* Recent bills */}
       <RecentBills />

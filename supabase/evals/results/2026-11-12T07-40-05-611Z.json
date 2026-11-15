@@ -1,0 +1,99 @@
+{
+  "model": "default model",
+  "tally": {
+    "vendor_name": {
+      "right": 10,
+      "total": 10
+    },
+    "account_number": {
+      "right": 10,
+      "total": 10
+    },
+    "invoice_number": {
+      "right": 10,
+      "total": 10
+    },
+    "amount": {
+      "right": 10,
+      "total": 10
+    },
+    "issue_date": {
+      "right": 10,
+      "total": 10
+    },
+    "due_date": {
+      "right": 10,
+      "total": 10
+    },
+    "customer_name": {
+      "right": 10,
+      "total": 10
+    },
+    "address.street": {
+      "right": 10,
+      "total": 10
+    },
+    "address.city": {
+      "right": 10,
+      "total": 10
+    },
+    "address.state": {
+      "right": 10,
+      "total": 10
+    },
+    "address.zip": {
+      "right": 10,
+      "total": 10
+    },
+    "portal_url": {
+      "right": 10,
+      "total": 10
+    },
+    "line_items": {
+      "right": 10,
+      "total": 10
+    }
+  },
+  "report": [
+    {
+      "bill": "1alder-creek-bill",
+      "misses": []
+    },
+    {
+      "bill": "2copper-ridge-bill",
+      "misses": []
+    },
+    {
+      "bill": "3harborlight-bill",
+      "misses": []
+    },
+    {
+      "bill": "4summit-trail-bill",
+      "misses": []
+    },
+    {
+      "bill": "5sunmeadow-bill",
+      "misses": []
+    },
+    {
+      "bill": "6prairie-grid-bill",
+      "misses": []
+    },
+    {
+      "bill": "7northline-bill",
+      "misses": []
+    },
+    {
+      "bill": "8maple-junction-bill",
+      "misses": []
+    },
+    {
+      "bill": "9cedar-valley-bill",
+      "misses": []
+    },
+    {
+      "bill": "10brightwater-bill",
+      "misses": []
+    }
+  ]
+}

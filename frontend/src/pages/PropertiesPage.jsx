@@ -50,7 +50,9 @@ function PropertiesPage() {
         const streetMatch = property.street?.toLowerCase().includes(term);
         const cityMatch = property.city?.toLowerCase().includes(term);
         const stateMatch = property.state?.toLowerCase().includes(term);
-        const zipMatch = String(property.zip || "").toLowerCase().includes(term);
+        const zipMatch = String(property.zip || "")
+          .toLowerCase()
+          .includes(term);
         const typeMatch = property.type?.toLowerCase().includes(term);
 
         return (
@@ -183,7 +185,12 @@ function PropertiesPage() {
     <>
       {/* Page Header */}
       <section className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-serif text-2xl font-bold">Properties</h1>
+        <div>
+          <h1 className="page-title">Properties</h1>
+          <p className="page-subtitle">
+            View and manage the properties you pay bills for.
+          </p>
+        </div>
 
         {canEditRecords && (
           <button
@@ -222,7 +229,8 @@ function PropertiesPage() {
           <h3 className="text-sm font-semibold">Active Properties</h3>
           <p className="mt-3 text-3xl font-bold">{activeCount}</p>
           <p className="mt-1 text-xs">
-            {totalProperties - activeCount} inactive properties
+            {totalProperties - activeCount} inactive{" "}
+            {totalProperties - activeCount === 1 ? "property" : "properties"}
           </p>
         </div>
       </section>
@@ -236,19 +244,13 @@ function PropertiesPage() {
       )}
 
       {error && (
-        <div
-          role="alert"
-          className="mt-6 rounded-lg bg-red-50 p-4 text-sm text-red-700"
-        >
+        <div role="alert" className="alert-error mt-6">
           {error}
         </div>
       )}
 
       {successMessage && (
-        <div
-          role="status"
-          className="mt-6 rounded-lg bg-green-50 p-4 text-sm text-green-700"
-        >
+        <div role="status" className="alert-success mt-6">
           {successMessage}
         </div>
       )}
@@ -256,10 +258,7 @@ function PropertiesPage() {
       {/* Search & Status Filter Controls Bar */}
       <section className="card mt-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex-1 min-w-[240px]">
-          <label
-            htmlFor="search-properties"
-            className="block text-xs font-medium text-gray-500 mb-1"
-          >
+          <label htmlFor="search-properties" className="label">
             Search Properties
           </label>
           <input
@@ -268,22 +267,19 @@ function PropertiesPage() {
             placeholder="Search by name, street, city, state, or zip..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            className="input"
           />
         </div>
 
-        <div>
-          <label
-            htmlFor="filter-status"
-            className="block text-xs font-medium text-gray-500 mb-1"
-          >
+        <div className="w-full sm:w-52">
+          <label htmlFor="filter-status" className="label">
             Status
           </label>
           <select
             id="filter-status"
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            className="input select"
           >
             <option value="all">All Statuses</option>
             <option value="active">Active Only</option>
@@ -294,7 +290,7 @@ function PropertiesPage() {
 
       {/* Properties by Type */}
       <section className="card mt-8">
-        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-black pb-4">
+        <div className="section-header mb-4">
           <h2 className="text-lg font-bold">Properties by Type</h2>
 
           <p className="text-sm">
@@ -325,8 +321,12 @@ function PropertiesPage() {
             </div>
           ) : filteredCount === 0 ? (
             <div className="py-10 text-center text-gray-600">
-              <p className="font-medium text-gray-800">No properties match your filters</p>
-              <p className="mt-1 text-xs">Try adjusting your search or status filter.</p>
+              <p className="font-medium text-gray-800">
+                No properties match your filters
+              </p>
+              <p className="mt-1 text-xs">
+                Try adjusting your search or status filter.
+              </p>
             </div>
           ) : (
             groupedProperties.map(([type, typeProperties]) => (
@@ -336,17 +336,24 @@ function PropertiesPage() {
               >
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <h3 className="font-semibold">{type}</h3>
-                  <p className="text-xs">{typeProperties.length} properties</p>
+                  <p className="text-xs">
+                    {typeProperties.length}{" "}
+                    {typeProperties.length === 1 ? "property" : "properties"}
+                  </p>
                 </div>
 
-                <table className="w-full text-left text-sm md:rounded-lg md:bg-white">
+                <table className="w-full text-left text-sm md:table-fixed md:rounded-lg md:bg-white">
                   <thead className="hidden text-xs uppercase md:table-header-group">
                     <tr>
-                      <th className="px-4 py-3 font-semibold">Property Name</th>
+                      <th className="px-4 py-3 font-semibold md:w-1/4">
+                        Property Name
+                      </th>
                       <th className="px-4 py-3 font-semibold">Address</th>
-                      <th className="px-4 py-3 font-semibold">Status</th>
+                      <th className="px-4 py-3 font-semibold md:w-32">
+                        Status
+                      </th>
                       {canEditRecords && (
-                        <th className="px-4 py-3 text-right font-semibold">
+                        <th className="px-4 py-3 text-right font-semibold md:w-48">
                           Actions
                         </th>
                       )}
@@ -373,7 +380,7 @@ function PropertiesPage() {
                       return (
                         <tr
                           key={property.id}
-                          className="mb-3 block rounded-lg bg-white p-4 md:mb-0 md:table-row md:rounded-none md:border-t md:border-section md:p-0"
+                          className="mb-3 block rounded-lg bg-white p-4 md:mb-0 md:table-row md:rounded-none md:border-t md:border-secondary md:p-0"
                         >
                           <td className="block py-1 font-semibold md:table-cell md:px-4 md:py-3 md:font-medium">
                             <button
@@ -381,7 +388,7 @@ function PropertiesPage() {
                               onClick={() =>
                                 navigate(`/properties/${property.id}`)
                               }
-                              className="text-left text-primary hover:text-primary-hover hover:underline"
+                              className="link text-left"
                             >
                               {property.name}
                             </button>
@@ -424,23 +431,23 @@ function PropertiesPage() {
 
                           {canEditRecords && (
                             <td className="block pt-2 md:table-cell md:px-4 md:py-3">
-                            <div className="flex gap-2 md:justify-end">
-                              <button
-                                type="button"
-                                onClick={() => openEditForm(property)}
-                                className="btn-secondary flex-1 px-4 py-2 text-xs md:flex-none"
-                              >
-                                Edit
-                              </button>
+                              <div className="flex gap-2 md:justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() => openEditForm(property)}
+                                  className="btn-secondary flex-1 px-4 py-2 text-xs md:flex-none"
+                                >
+                                  Edit
+                                </button>
 
-                              <button
-                                type="button"
-                                onClick={() => handleDelete(property)}
-                                className="flex-1 rounded-lg px-4 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 md:flex-none"
-                              >
-                                Delete
-                              </button>
-                            </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(property)}
+                                  className="btn-danger flex-1 px-4 py-2 text-xs md:flex-none"
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             </td>
                           )}
                         </tr>

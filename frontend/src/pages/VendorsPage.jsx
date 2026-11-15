@@ -1,18 +1,11 @@
-
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import VendorForm from "../components/VendorForm";
+import VendorSummary from "../components/VendorSummary";
 import { useUserProfile } from "../hooks/useUserProfile";
 import { canManageRecords } from "../utils/permissions";
 import { useVendors } from "../hooks/useVendors";
 import { supabase } from "../../utils/supabase";
-
-const cards = [
-  { title: "Total Vendors", value: "0", note: "Across 0 service types" },
-  { title: "Vendor Accounts", value: "0", note: "Linked to 0 properties" },
-  { title: "Open Bills", value: "0", note: "From 0 vendors" },
-  { title: "Active Vendors", value: "0", note: "0 inactive" },
-];
 
 const serviceTypes = [
   "Electric",
@@ -22,12 +15,13 @@ const serviceTypes = [
   "Property Services",
 ];
 
+// width keeps the columns lined up across every service type table
 const columns = [
-  { label: "Vendor Name", key: "name", mobile: true },
+  { label: "Vendor Name", key: "name", mobile: true, width: "md:w-1/4" },
   { label: "Also On Bills As", key: "aliases" },
-  { label: "Accounts", key: "accounts" },
-  { label: "Open Bills", key: "open_bills" },
-  { label: "Status", key: "status", mobile: true },
+  { label: "Accounts", key: "accounts", width: "md:w-24" },
+  { label: "Open Bills", key: "open_bills", width: "md:w-28" },
+  { label: "Status", key: "status", mobile: true, width: "md:w-28" },
 ];
 
 const hideOnMobile = (col) => (col.mobile ? "" : "hidden md:table-cell");
@@ -35,10 +29,7 @@ const hideOnMobile = (col) => (col.mobile ? "" : "hidden md:table-cell");
 function renderVendorCell(col, vendor, accountCount) {
   if (col.key === "name") {
     return (
-      <Link
-        to={`/vendors/${vendor.id}`}
-        className="font-semibold text-primary underline hover:no-underline"
-      >
+      <Link to={`/vendors/${vendor.id}`} className="link">
         {vendor.name}
       </Link>
     );
@@ -54,8 +45,14 @@ function renderVendorCell(col, vendor, accountCount) {
 
   if (col.key === "status") {
     return (
-      <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold">
-        {vendor.status === "active" ? "Active" : vendor.status || "—"}
+      <span
+        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+          vendor.status === "active"
+            ? "bg-green-100 text-green-800"
+            : "bg-red-100 text-red-800"
+        }`}
+      >
+        {vendor.status === "active" ? "Active" : "Inactive"}
       </span>
     );
   }
@@ -68,6 +65,9 @@ function VendorsPage() {
   const { profile } = useUserProfile();
   const canEditRecords = canManageRecords(profile?.role);
 
+  const [openBillCount, setOpenBillCount] = useState(null);
+  const [isLoadingOpenBillCount, setIsLoadingOpenBillCount] = useState(true);
+  const [openBillCountError, setOpenBillCountError] = useState("");
   const [showVendorForm, setShowVendorForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -75,16 +75,86 @@ function VendorsPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [selectedVendorIds, setSelectedVendorIds] = useState(new Set());
   const [editVendorId, setEditVendorId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const unassignedVendors = vendors.filter(
+  const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+  const normalizedAccountSearchTerm = normalizedSearchTerm.replace(/\s/g, "");
+  const filteredVendors = vendors.filter((vendor) => {
+    if (!normalizedSearchTerm) return true;
+
+    return (
+      String(vendor.name ?? "")
+        .toLowerCase()
+        .includes(normalizedSearchTerm) ||
+      (vendor.aliases || []).some((alias) =>
+        String(alias).toLowerCase().includes(normalizedSearchTerm),
+      ) ||
+      (vendor.vendor_account || []).some(
+        (account) =>
+          String(account.service ?? "")
+            .toLowerCase()
+            .includes(normalizedSearchTerm) ||
+          String(account.account_number ?? "")
+            .replace(/\s/g, "")
+            .toLowerCase()
+            .includes(normalizedAccountSearchTerm),
+      )
+    );
+  });
+
+  const unassignedVendors = filteredVendors.filter(
     (vendor) => !(vendor.vendor_account || []).length,
   );
 
-  const allDisplayedVendors = vendors;
+  const allDisplayedVendors = filteredVendors;
 
   useEffect(() => {
     fetchVendors().catch(() => {});
   }, [fetchVendors]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadOpenBillCount() {
+      try {
+        const { count, error: queryError } = await supabase
+          .from("bill")
+          .select("id, vendor_account!inner(vendor_id)", {
+            count: "exact",
+            head: true,
+          })
+          .in("status", ["pending", "needs_review", "approved"]);
+
+        if (queryError) throw queryError;
+        if (count === null) {
+          throw new Error("Supabase did not return the open bill count.");
+        }
+
+        if (isMounted) {
+          setOpenBillCount(count);
+          setOpenBillCountError("");
+        }
+      } catch (caughtError) {
+        if (isMounted) {
+          setOpenBillCountError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Could not load open bills.",
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingOpenBillCount(false);
+        }
+      }
+    }
+
+    loadOpenBillCount();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   function closeVendorForm() {
     setShowVendorForm(false);
@@ -150,11 +220,13 @@ function VendorsPage() {
     setSuccessMessage("");
 
     try {
-      const { data, error: invokeError } =
-        await supabase.functions.invoke("update-vendor", {
+      const { data, error: invokeError } = await supabase.functions.invoke(
+        "update-vendor",
+        {
           method: "PATCH",
           body: { ...vendorData, id: editVendorId },
-        });
+        },
+      );
 
       if (invokeError) {
         let serverMessage = "";
@@ -261,18 +333,37 @@ function VendorsPage() {
 
   const vendorsByService = serviceTypes.map((type) => ({
     type,
-    vendors: vendors.filter((vendor) =>
+    vendors: filteredVendors.filter((vendor) =>
       (vendor.vendor_account || []).some(
         (account) => account.service?.toLowerCase() === type.toLowerCase(),
       ),
     ),
   }));
 
+  const vendorAccountCount = vendors.reduce(
+    (total, vendor) => total + (vendor.vendor_account || []).length,
+    0,
+  );
+  const vendorsWithAccountsCount = vendors.filter(
+    (vendor) => (vendor.vendor_account || []).length > 0,
+  ).length;
+  const serviceTypeCount = new Set(
+    vendors.flatMap((vendor) =>
+      (vendor.vendor_account || [])
+        .map((account) => account.service?.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ).size;
+  const activeVendorCount = vendors.filter(
+    (vendor) => vendor.status === "active",
+  ).length;
+  const inactiveVendorCount = vendors.length - activeVendorCount;
+
   const tableHead = (
     <thead>
       <tr className="text-xs uppercase">
         {canEditRecords && (
-          <th className="w-8 px-4 py-3 font-semibold">
+          <th className="w-12 px-4 py-3 font-semibold">
             <span className="sr-only">Select</span>
           </th>
         )}
@@ -280,14 +371,14 @@ function VendorsPage() {
         {columns.map((col) => (
           <th
             key={col.key}
-            className={`px-4 py-3 font-semibold ${hideOnMobile(col)}`}
+            className={`px-4 py-3 font-semibold ${hideOnMobile(col)} ${col.width ?? ""}`}
           >
             {col.label}
           </th>
         ))}
 
         {canEditRecords && (
-          <th className="hidden px-4 py-3 font-semibold md:table-cell">
+          <th className="hidden px-4 py-3 font-semibold md:table-cell md:w-24">
             Actions
           </th>
         )}
@@ -301,7 +392,7 @@ function VendorsPage() {
 
   function renderVendorRow(vendor, accountCount) {
     return (
-      <tr key={vendor.id} className="border-t border-section">
+      <tr key={vendor.id} className="border-t border-secondary">
         {canEditRecords && (
           <td className="px-4 py-3">
             <input
@@ -329,7 +420,7 @@ function VendorsPage() {
                 setEditVendorId(vendor.id);
                 setShowVendorForm(true);
               }}
-              className="cursor-pointer text-sm text-primary underline"
+              className="btn-secondary px-4 py-2 text-xs"
               aria-label={`Edit ${vendor.name}`}
             >
               Edit
@@ -347,7 +438,12 @@ function VendorsPage() {
   return (
     <>
       <section className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-serif text-2xl font-bold">Vendors</h1>
+        <div>
+          <h1 className="page-title">Vendors</h1>
+          <p className="page-subtitle">
+            View and manage the companies that send you bills.
+          </p>
+        </div>
 
         {canEditRecords && (
           <button
@@ -356,7 +452,7 @@ function VendorsPage() {
               setFormError("");
               setShowVendorForm(true);
             }}
-            className="btn-primary cursor-pointer px-5 py-3 text-sm"
+            className="btn-primary px-5 py-3 text-sm"
           >
             + Add Vendor
           </button>
@@ -371,19 +467,19 @@ function VendorsPage() {
       )}
 
       {successMessage && (
-        <p role="status" className="mt-4 text-sm text-green-700">
+        <p role="status" className="alert-success mt-4">
           {successMessage}
         </p>
       )}
 
       {formError && (
-        <p role="alert" className="mt-4 text-sm text-red-700">
+        <p role="alert" className="alert-error mt-4">
           {formError}
         </p>
       )}
 
       {error && (
-        <p role="alert" className="mt-4 text-sm text-red-700">
+        <p role="alert" className="alert-error mt-4">
           {error}
         </p>
       )}
@@ -396,19 +492,25 @@ function VendorsPage() {
           id="vendor-search"
           type="search"
           placeholder="Search vendors"
-          className="w-full rounded-lg border border-secondary px-4 py-3 text-sm md:max-w-sm"
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+          className="input md:max-w-sm"
         />
       </div>
 
-      <section className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
-        {cards.map(({ title, value, note }) => (
-          <div key={title} className="card">
-            <h3 className="text-sm font-semibold">{title}</h3>
-            <p className="mt-3 text-3xl font-bold">{value}</p>
-            {note && <p className="mt-1 text-xs">{note}</p>}
-          </div>
-        ))}
-      </section>
+      <VendorSummary
+        totalVendorCount={vendors.length}
+        vendorAccountCount={vendorAccountCount}
+        serviceTypeCount={serviceTypeCount}
+        vendorsWithAccountsCount={vendorsWithAccountsCount}
+        activeVendorCount={activeVendorCount}
+        inactiveVendorCount={inactiveVendorCount}
+        isLoadingVendors={loading}
+        vendorError={error}
+        openBillCount={openBillCount}
+        isLoadingOpenBillCount={isLoadingOpenBillCount}
+        openBillCountError={openBillCountError}
+      />
 
       {canEditRecords && (
         <div className="mt-6 flex flex-wrap items-center gap-4">
@@ -416,7 +518,7 @@ function VendorsPage() {
             type="button"
             onClick={handleDeleteSelected}
             disabled={selectedVendorIds.size === 0 || isDeleting}
-            className="btn-secondary w-full cursor-pointer px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            className="btn-danger w-full border border-red-200 px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
             {isDeleting
               ? "Deleting..."
@@ -426,7 +528,7 @@ function VendorsPage() {
       )}
 
       <section className="card mt-8">
-        <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-black pb-4">
+        <div className="section-header">
           <h2 className="text-lg font-bold">Vendors by Service Type</h2>
 
           <div className="flex items-center gap-4">
@@ -450,6 +552,12 @@ function VendorsPage() {
 
         {loading && vendors.length === 0 ? (
           <p className="mt-4 text-sm text-gray-600">Loading vendors…</p>
+        ) : filteredVendors.length === 0 ? (
+          <p className="mt-4 text-sm text-gray-600">
+            {normalizedSearchTerm
+              ? "No vendors match your search."
+              : "No vendors found."}
+          </p>
         ) : (
           <>
             {vendorsByService.map(({ type, vendors: typeVendors }) => (
@@ -457,15 +565,16 @@ function VendorsPage() {
                 <div className="flex items-baseline justify-between">
                   <h3 className="font-semibold">{type}</h3>
                   <span className="text-xs">
-                    {typeVendors.length} vendors
+                    {typeVendors.length}{" "}
+                    {typeVendors.length === 1 ? "vendor" : "vendors"}
                   </span>
                 </div>
 
-                <table className="mt-2 w-full rounded-lg bg-white text-left text-sm">
+                <table className="mt-2 w-full rounded-lg bg-white text-left text-sm md:table-fixed">
                   {tableHead}
                   <tbody>
                     {typeVendors.length === 0 ? (
-                      <tr className="border-t border-section">
+                      <tr className="border-t border-secondary">
                         <td
                           colSpan={columns.length + (canEditRecords ? 3 : 1)}
                           className="px-4 py-3 text-gray-600"
@@ -495,11 +604,12 @@ function VendorsPage() {
                 <div className="flex items-baseline justify-between">
                   <h3 className="font-semibold">Unassigned</h3>
                   <span className="text-xs">
-                    {unassignedVendors.length} vendors
+                    {unassignedVendors.length}{" "}
+                    {unassignedVendors.length === 1 ? "vendor" : "vendors"}
                   </span>
                 </div>
 
-                <table className="mt-2 w-full rounded-lg bg-white text-left text-sm">
+                <table className="mt-2 w-full rounded-lg bg-white text-left text-sm md:table-fixed">
                   {tableHead}
                   <tbody>
                     {unassignedVendors.map((vendor) =>

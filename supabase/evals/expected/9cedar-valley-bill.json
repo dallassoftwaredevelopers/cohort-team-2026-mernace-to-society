@@ -1,0 +1,22 @@
+{
+	"vendor_name": "Cedar Valley Pest Control",
+	"account_number": "2000456705",
+	"invoice_number": "BILL-1001",
+	"amount": 206.54,
+	"issue_date": "2026-10-02",
+	"due_date": "2026-10-16",
+	"customer_name": "Cedar Valley Market",
+	"service_address": {
+		"street": "125 Industrial Way",
+		"city": "Springfield",
+		"state": "IL",
+		"zip": "62701"
+	},
+	"portal_url": "https://cedar-valley-utility-demo.vercel.app",
+	"line_items": [
+		{
+			"description": "Quarterly pest prevention and inspection",
+			"amount": 206.54
+		}
+	]
+}

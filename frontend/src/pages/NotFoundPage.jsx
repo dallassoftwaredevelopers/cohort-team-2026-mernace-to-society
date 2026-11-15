@@ -7,16 +7,13 @@ function NotFoundPage() {
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">
           Error 404
         </p>
-        <h1 className="mt-4 text-4xl font-bold text-sidebar sm:text-5xl">
+        <h1 className="mt-4 font-serif text-4xl font-bold text-sidebar sm:text-5xl">
           Page not found
         </h1>
         <p className="mt-4 text-base text-gray-600">
           The page you’re looking for doesn’t exist or may have moved.
         </p>
-        <Link
-          to="/"
-          className="btn-primary mt-8 inline-flex px-5 py-3 no-underline"
-        >
+        <Link to="/" className="btn-primary mt-8 inline-flex px-5 py-3">
           Return home
         </Link>
       </div>

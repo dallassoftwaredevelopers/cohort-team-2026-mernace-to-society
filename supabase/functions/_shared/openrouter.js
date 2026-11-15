@@ -12,7 +12,6 @@ const FALLBACK_MODEL = 'openai/gpt-4o-mini';
 const RETRYABLE_STATUSES = [429, 500, 502, 503, 504];
 const RETRY_DELAY_MS = 1500;
 
-// How OpenRouter turns a PDF into something the model can read:
 // 'native' = the model reads the PDF itself (needs a model that supports files)
 // 'cloudflare-ai' = OpenRouter converts it to text first, free, works with any model
 const DEFAULT_PDF_ENGINE = 'native';
@@ -24,69 +23,83 @@ export const MIME_BY_EXTENSION = {
 	png: 'image/png',
 };
 
-// The shape we ask the model to return. match-bill (DC-77) validates it for real;
+// The shape we ask the model to return. match-bill funciton validates it;
 // this schema only tells the model what to produce.
 const BILL_SCHEMA = {
-    type: 'object',
-    properties: {
-        vendor_name: { type: ['string', 'null'] },
-        account_number: { type: ['string', 'null'] },
-        invoice_number: { type: ['string', 'null'] },
-        amount: { type: ['number', 'null'], description: 'Total amount due' },
-        issue_date: { type: ['string', 'null'], description: 'YYYY-MM-DD' },
-        due_date: { type: ['string', 'null'], description: 'YYYY-MM-DD' },
-        bill_url: { type: ['string', 'null'], description: 'Any payment or account URL printed on the bill' },
-        extracted_url: { type: ['string', 'null'], description: 'Extracted payment or account URL from the bill' },
-        // Who is billed, e.g. "HarborLite Design Co." Only a suggestion for a new
-        // property's name; never used to match or assign a bill.
-        customer_name: {
-            type: ['string', 'null'],
-            description:
-                'The customer, account holder or location name being billed, not the vendor',
-        },
-        // Same field names as PropertyForm, so it can pre-fill a new property.
-        // Always an object (strict mode); unknown parts are null.
-        service_address: {
-            type: 'object',
-            description:
-                'Where the service is provided (the property), not the vendor payment address',
-            properties: {
-                street: { type: ['string', 'null'] },
-                city: { type: ['string', 'null'] },
-                state: { type: ['string', 'null'], description: '2-letter code, e.g. NY' },
-                // A string so leading zeros survive (e.g. 02134)
-                zip: { type: ['string', 'null'] },
-            },
-            required: ['street', 'city', 'state', 'zip'],
-            additionalProperties: false,
-        },
-        line_items: {
-            type: 'array',
-            items: {
-                type: 'object',
-                properties: {
-                    description: { type: 'string' },
-                    amount: { type: 'number' },
-                },
-                required: ['description', 'amount'],
-                additionalProperties: false,
-            },
-        },
-    },
-    required: [
-        'vendor_name',
-        'account_number',
-        'invoice_number',
-        'amount',
-        'issue_date',
-        'due_date',
-        'bill_url',
-        'extracted_url',
-        'customer_name',
-        'service_address',
-        'line_items',
-    ],
-    additionalProperties: false,
+	type: 'object',
+	properties: {
+		vendor_name: { type: ['string', 'null'] },
+		account_number: { type: ['string', 'null'] },
+		invoice_number: { type: ['string', 'null'] },
+		amount: { type: ['number', 'null'], description: 'Total amount due' },
+		issue_date: { type: ['string', 'null'], description: 'YYYY-MM-DD' },
+		due_date: { type: ['string', 'null'], description: 'YYYY-MM-DD' },
+		bill_url: {
+			type: ['string', 'null'],
+			description: 'Any payment or account URL printed on the bill',
+		},
+		extracted_url: {
+			type: ['string', 'null'],
+			description: 'Extracted payment or account URL from the bill',
+		},
+
+		customer_name: {
+			type: ['string', 'null'],
+			description:
+				'The customer, account holder or location name being billed, not the vendor',
+		},
+		// Same field names as PropertyForm, so it can pre-fill a new property.
+		// Always an object (strict mode); unknown parts are null.
+		service_address: {
+			type: 'object',
+			description:
+				'Where the service is provided (the property), not the vendor payment address',
+			properties: {
+				street: { type: ['string', 'null'] },
+				city: { type: ['string', 'null'] },
+				state: {
+					type: ['string', 'null'],
+					description: '2-letter code, e.g. NY',
+				},
+				zip: { type: ['string', 'null'] },
+			},
+			required: ['street', 'city', 'state', 'zip'],
+			additionalProperties: false,
+		},
+		// Pre-fills the vendor's portal_url when adding a new vendor
+		portal_url: {
+			type: ['string', 'null'],
+			description: 'The website printed on the bill for paying it online',
+		},
+		line_items: {
+			type: 'array',
+			items: {
+				type: 'object',
+				properties: {
+					description: { type: 'string' },
+					amount: { type: 'number' },
+				},
+				required: ['description', 'amount'],
+				additionalProperties: false,
+			},
+		},
+	},
+	required: [
+		'vendor_name',
+		'account_number',
+		'invoice_number',
+		'amount',
+		'issue_date',
+		'due_date',
+		'bill_url',
+		'extracted_url',
+		'customer_name',
+		'service_address',
+		'portal_url',
+		'line_items',
+	],
+	additionalProperties: false,
+
 };
 
 const PROMPT =
@@ -103,7 +116,6 @@ export async function extractBillData({ bytes, mimeType, filename }) {
 	const pdfEngine = Deno.env.get('OPENROUTER_PDF_ENGINE') || DEFAULT_PDF_ENGINE;
 	const dataUrl = `data:${mimeType};base64,${encodeBase64(bytes)}`;
 
-	// PDFs go in a "file" part, images in an "image_url" part
 	const filePart =
 		mimeType === 'application/pdf'
 			? { type: 'file', file: { filename, file_data: dataUrl } }
@@ -112,6 +124,7 @@ export async function extractBillData({ bytes, mimeType, filename }) {
 	const requestBody = JSON.stringify({
 		// OpenRouter tries these in order if a provider fails
 		models: model === FALLBACK_MODEL ? [model] : [model, FALLBACK_MODEL],
+		temperature: 0,
 		messages: [
 			{ role: 'user', content: [{ type: 'text', text: PROMPT }, filePart] },
 		],
