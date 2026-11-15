@@ -1,3 +1,6 @@
+import { Link } from "react-router-dom";
+import PasswordHint from "./PasswordHint";
+
 function ProfileSettings({
   handleSaveProfile,
   initials,
@@ -12,7 +15,8 @@ function ProfileSettings({
   setProfileErrorMessage,
   setProfileSuccessMessage,
   isProfileLoading,
-  isUpdating,
+  isSavingProfile,
+  isUpdatingPassword,
   showPasswordForm,
   setShowPasswordForm,
   handleUpdatePassword,
@@ -96,10 +100,10 @@ function ProfileSettings({
 
           <button
             type="submit"
-            disabled={isProfileLoading || !profile || isUpdating}
+            disabled={isProfileLoading || !profile || isSavingProfile}
             className="btn-primary mt-6 px-5 py-3 text-sm disabled:opacity-50"
           >
-            {isUpdating ? "Saving..." : "Save Profile"}
+            {isSavingProfile ? "Saving..." : "Save Profile"}
           </button>
         </form>
       </section>
@@ -129,7 +133,7 @@ function ProfileSettings({
             <form onSubmit={handleUpdatePassword} className="mt-4">
               <div className="grid grid-cols-1 gap-4 md:w-1/2">
                 {passwordFields.map(
-                  ({ label, id, autoComplete, placeholder }) => (
+                  ({ label, id, autoComplete, placeholder, minLength, showHint }) => (
                     <div key={id}>
                       <label htmlFor={id} className="label">
                         {label}
@@ -139,6 +143,7 @@ function ProfileSettings({
                         type="password"
                         autoComplete={autoComplete}
                         placeholder={placeholder}
+                        minLength={minLength}
                         value={passwords[id]}
                         onChange={(e) =>
                           setPasswords({
@@ -149,6 +154,7 @@ function ProfileSettings({
                         required
                         className={inputClass}
                       />
+                      {showHint && <PasswordHint password={passwords[id]} />}
                     </div>
                   ),
                 )}
@@ -168,12 +174,21 @@ function ProfileSettings({
 
               <button
                 type="submit"
-                disabled={isUpdating}
+                disabled={isUpdatingPassword}
                 className="btn-primary mt-6 px-5 py-3 text-sm disabled:opacity-50"
               >
-                {isUpdating ? "Updating..." : "Update password"}
+                {isUpdatingPassword ? "Updating..." : "Update password"}
               </button>
             </form>
+
+            <Link
+              to="/forgot-password"
+              state={{ email: authUser?.email ?? profile?.email ?? "", from: "/settings" }}
+              className="mt-2 inline-block text-sm font-semibold text-primary hover:underline"
+            >
+              Forgot password?
+            </Link>
+
           </div>
         </div>
       </section>

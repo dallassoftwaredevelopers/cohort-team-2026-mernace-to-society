@@ -9,8 +9,7 @@ import {
   getInitials,
   useUserProfile,
 } from "../hooks/useUserProfile";
-import { canManageTeam } from "../utils/permissions";
-import { Link } from "react-router-dom";
+import { MIN_PASSWORD_LENGTH, PASSWORD_RULES_ERROR, passwordMeetsRules } from "../../utils/passwordRules";
 
 const tabs = ["Profile", "Organization", "Payment Methods", "Team & Roles"];
 
@@ -35,6 +34,8 @@ const passwordFields = [
     id: "new_password",
     autoComplete: "new-password",
     placeholder: "Enter a new password",
+    minLength: MIN_PASSWORD_LENGTH,
+    showHint: true,
   },
   {
     label: "Confirm New Password",
@@ -133,7 +134,8 @@ function AccountSettingsPage() {
   });
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [name, setName] = useState(null);
   const [profileErrorMessage, setProfileErrorMessage] = useState("");
   const [profileSuccessMessage, setProfileSuccessMessage] = useState("");
@@ -283,7 +285,7 @@ function AccountSettingsPage() {
       return;
     }
 
-    setIsUpdating(true);
+    setIsSavingProfile(true);
     try {
       // The provider updates shared state too, so the sidebar reflects the saved name immediately.
       await updateProfileName(trimmedName);
@@ -296,7 +298,7 @@ function AccountSettingsPage() {
           : "Could not update your profile.",
       );
     } finally {
-      setIsUpdating(false);
+      setIsSavingProfile(false);
     }
   }
 
@@ -426,52 +428,63 @@ function AccountSettingsPage() {
     e.preventDefault();
     setPasswordError("");
     setPasswordSuccess("");
-    setIsUpdating(true);
 
-    // Re-authenticate with the current password before accepting a new one.
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password: passwords.current_password,
-    });
-
-    if (signInError) {
-      setPasswordError(
-        "Current password entry is incorrect. Please try again.",
-      );
-      setIsUpdating(false);
+    if(!passwordMeetsRules(passwords.new_password)){
+      setPasswordError(PASSWORD_RULES_ERROR);
       return;
     }
 
-    // Don't update Auth credentials unless both new-password fields agree.
     if (passwords.new_password !== passwords.confirm_new_password) {
       setPasswordError(
-        "New password and Confirm new password fields do not match. Please try again.",
+        "New password and Confirm new password fields do not match. Please try again."
       );
-      setIsUpdating(false);
       return;
     }
 
-    const { error: updateError } = await supabase.auth.updateUser({
-      password: passwords.new_password,
-      current_password: passwords.current_password,
-    });
+    setIsUpdatingPassword(true);
+    try {
+      
+      // Re-authenticate with the current password before accepting a new one.
+      const {
+      data: { user },
+      } = await supabase.auth.getUser();
 
-    if (updateError) {
-      setPasswordError(updateError.message);
-    } else {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: passwords.current_password,
+      });
+
+      if (signInError) {
+        setPasswordError(
+          "Current password entry is incorrect. Please try again."
+        )
+        return;
+      }
+
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: passwords.new_password,
+        current_password: passwords.current_password,
+      });
+
+      if (updateError) {
+        setPasswordError(updateError.message);
+        return;
+      } 
+      
       setPasswordSuccess("Your password has been updated.");
       setPasswords({
         current_password: "",
         new_password: "",
         confirm_new_password: "",
       });
-    }
 
-    setIsUpdating(false);
+    } catch (error) {
+      setPasswordError(
+        error instanceof Error ? error.message : "Could not update your password.",
+      );
+    } finally {
+        setIsUpdatingPassword(false);
+    }  
   }
 
   return (
@@ -504,165 +517,6 @@ function AccountSettingsPage() {
       </nav>
 
       {activeTab === "Profile" && (
-        <>
-          <section className="card mt-8">
-            <h2 className="border-b border-black pb-4 text-lg font-bold">
-              Profile
-            </h2>
-
-            <form onSubmit={handleSaveProfile} className="mt-4">
-              <div className="flex items-center gap-4">
-                <div
-                  className="flex h-14 w-14 items-center justify-center rounded-full bg-sidebar text-lg font-bold text-white"
-                  aria-hidden="true"
-                >
-                  {initials}
-                </div>
-                <div>
-                  <p className="font-semibold">
-                    {displayedName || authUser?.email || "Account"}
-                  </p>
-                  <p className="text-sm">{formatRole(profile?.role)}</p>
-                </div>
-              </div>
-
-              {profileError && (
-                <p role="alert" className="mt-4 text-sm text-red-700">
-                  {profileError}
-                </p>
-              )}
-              {profileErrorMessage && (
-                <p role="alert" className="mt-4 text-sm text-red-700">
-                  {profileErrorMessage}
-                </p>
-              )}
-              {profileSuccessMessage && (
-                <p role="status" className="mt-4 text-sm text-green-700">
-                  {profileSuccessMessage}
-                </p>
-              )}
-
-              <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label htmlFor="name" className="text-sm font-semibold">
-                    Full Name
-                  </label>
-                  <input
-                    id="name"
-                    type="text"
-                    value={name ?? profile?.name ?? ""}
-                    onChange={(event) => {
-                      setName(event.target.value);
-                      setProfileErrorMessage("");
-                      setProfileSuccessMessage("");
-                    }}
-                    disabled={isProfileLoading || !profile}
-                    required
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="email" className="text-sm font-semibold">
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    value={authUser?.email ?? profile?.email ?? ""}
-                    readOnly
-                    className={`${inputClass} bg-gray-100`}
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isProfileLoading || !profile || isUpdating}
-                className="btn-primary mt-6 px-5 py-3 text-sm disabled:opacity-50"
-              >
-                {isUpdating ? "Saving..." : "Save Profile"}
-              </button>
-            </form>
-          </section>
-
-          {/* Password: managed by Supabase Auth, separate from the app profile row. */}
-          <section className="card mt-8">
-            <h2 className="border-b border-black pb-4 text-lg font-bold">
-              Password
-            </h2>
-            <button
-              type="button"
-              onClick={() => setShowPasswordForm(!showPasswordForm)}
-              aria-expanded={showPasswordForm}
-              aria-controls="password-form"
-              className="btn-secondary mt-4 px-5 py-3 text-sm"
-            >
-              Change password
-            </button>
-            <div
-              id="password-form"
-              className={`grid transition-all duration-300 ease-in-out ${
-                showPasswordForm ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
-              }`}
-              inert={!showPasswordForm}
-            >
-              <div className="overflow-hidden">
-                <form onSubmit={handleUpdatePassword} className="mt-4">
-                  <div className="grid grid-cols-1 gap-4 md:w-1/2">
-                    {passwordFields.map(({ label, id, autoComplete, placeholder }) => (
-                      <div key={id}>
-                        <label htmlFor={id} className="text-sm font-semibold">
-                          {label}
-                        </label>
-                        <input
-                          id={id}
-                          type="password"
-                          autoComplete={autoComplete}
-                          placeholder={placeholder}
-                          value={passwords[id]}
-                          onChange={(e) =>
-                            setPasswords({...passwords, [id]: e.target.value})
-                          }
-                          required
-                          className={inputClass}
-                        />
-                      </div>
-                    ))}
-                  </div>
-
-                  {passwordError && (
-                    <p role="alert" className="mt-4 text-sm text-red-600">
-                      {passwordError}
-                    </p>
-                  )}
-
-                  {passwordSuccess && (
-                    <p role="status" className="mt-4 text-sm text-green-700">
-                      {passwordSuccess}
-                    </p>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={isUpdating}
-                    className="btn-primary mt-6 px-5 py-3 text-sm disabled:opacity-50"
-                  >
-                    {isUpdating ? "Updating..." : "Update password"}
-                  </button>
-                </form>
-
-                <Link 
-                  to="/forgot-password"
-                  state={{ email: authUser?.email ?? profile?.email ?? "" }}
-                  className="inline-block mt-2 cursor-pointer text-sm font-semibold text-primary hover:underline"
-                >
-                  Forgot password?
-                </Link>
-
-              </div>
-            </div>
-          </section>
-        </>
         <ProfileSettings
           handleSaveProfile={handleSaveProfile}
           initials={initials}
@@ -677,7 +531,8 @@ function AccountSettingsPage() {
           setProfileErrorMessage={setProfileErrorMessage}
           setProfileSuccessMessage={setProfileSuccessMessage}
           isProfileLoading={isProfileLoading}
-          isUpdating={isUpdating}
+          isSavingProfile={isSavingProfile}
+          isUpdatingPassword={isUpdatingPassword}
           showPasswordForm={showPasswordForm}
           setShowPasswordForm={setShowPasswordForm}
           handleUpdatePassword={handleUpdatePassword}

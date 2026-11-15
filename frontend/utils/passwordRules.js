@@ -13,6 +13,8 @@ export const PASSWORD_RULES = [
     { id: "symbol", label: "A symbol (! @ # $ etc.)", test: (p) => /[!@#$%^&*()_+\-=[\]{};':"\\|<>?,./`~]/.test(p) },
 ];
 
+export const PASSWORD_RULES_ERROR = "Your password doesn't meet all the requirements.";
+
 export function passwordMeetsRules(password) {
     return PASSWORD_RULES.every((rule) => rule.test(password));
 }

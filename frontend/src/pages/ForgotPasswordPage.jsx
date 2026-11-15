@@ -2,11 +2,17 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../utils/supabase";
 import PasswordHint from "../components/PasswordHint";
-import { MIN_PASSWORD_LENGTH, passwordMeetsRules } from "../../utils/passwordRules";
+import { MIN_PASSWORD_LENGTH, PASSWORD_RULES_ERROR, passwordMeetsRules } from "../../utils/passwordRules";
 
 //Keep in sync with TOML key max_frequency in supabase/config.toml
 const RESEND_COOLDOWN_SECONDS = 60;
 
+const BACK_LINKS = {
+    "/login": "Back to login",
+    "/settings": "Back to account settings",
+    "/": "Back to home",
+};
+const DEFAULT_BACK_PATH = "/"
 
 const inputClassName = "w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
@@ -22,7 +28,10 @@ function ForgotPasswordPage() {
     const [infoMessage, setInfoMessage] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [cooldown, setCooldown] = useState(0);
-    
+    const from = location.state?.from;
+    const backPath = from in BACK_LINKS ? from : DEFAULT_BACK_PATH;
+    const backLabel = BACK_LINKS[backPath];
+
     // Ticks resend countdown down once per second
     useEffect(() => {
         if (cooldown <= 0) return;
@@ -85,7 +94,7 @@ function ForgotPasswordPage() {
         setErrorMessage("");
 
         if (!passwordMeetsRules(newPassword)) {
-            setErrorMessage("Your password doesn't meet all the requirements.")
+            setErrorMessage(PASSWORD_RULES_ERROR);
             return;
         }
 
@@ -106,7 +115,7 @@ function ForgotPasswordPage() {
         //log out of account on all other devices
         await supabase.auth.signOut({ scope: "others" });
 
-        navigate("/dashboard", { replace: true, state: { passwordReset: true } });
+        navigate(backPath === "/settings" ? "/settings" : "/dashboard", { replace: true, state: { passwordReset: true } });
     }
 
     return (
@@ -277,11 +286,11 @@ function ForgotPasswordPage() {
 
                 {step !== "password" && (
                     <Link 
-                        to="/login"
+                        to={backPath}
                         className="mt-4 block text-sm text-primary hover:underline"
                     >
                     
-                        Back to login
+                        {backLabel}
 
                     </Link>
                 )}

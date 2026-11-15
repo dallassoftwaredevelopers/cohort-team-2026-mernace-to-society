@@ -229,7 +229,7 @@ const LoginPage = () => {
             {!isSignUp && (
               <Link
                 to="/forgot-password"
-                state={{ email }}
+                state={{ email, from: "/login" }}
                 className="block mt-2 text-sm font-semibold text-primary hover:underline"
               >
                 Forgot password?
