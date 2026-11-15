@@ -1,0 +1,21 @@
+{
+  "name": "worker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@browserbasehq/stagehand": "^4.4.0",
+    "@openrouter/ai-sdk-provider": "^3.1.0",
+    "@supabase/supabase-js": "^2.119.0",
+    "ai": "^7.0.173",
+    "dotenv": "^18.0.10",
+    "zod": "^4.6.7"
+  }
+}
