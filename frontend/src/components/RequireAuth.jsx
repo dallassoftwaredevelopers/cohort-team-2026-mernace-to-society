@@ -150,7 +150,7 @@ function RequireAuth({ children }) {
         </h1>
         <p className="mt-3 text-sm text-gray-600">
           {isInactive
-            ? "Your account is inactive. Contact an organization admin to restore access."
+            ? "Your account is inactive. Contact your administrator for access."
             : "Your account does not have an active team profile. Contact an organization admin."}
         </p>
         {signOutError && (
