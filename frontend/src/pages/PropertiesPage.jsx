@@ -271,7 +271,7 @@ function PropertiesPage() {
           />
         </div>
 
-        <div>
+        <div className="w-full sm:w-52">
           <label htmlFor="filter-status" className="label">
             Status
           </label>
@@ -279,7 +279,7 @@ function PropertiesPage() {
             id="filter-status"
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="input"
+            className="input select"
           >
             <option value="all">All Statuses</option>
             <option value="active">Active Only</option>
