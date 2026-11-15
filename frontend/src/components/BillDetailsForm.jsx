@@ -1,8 +1,26 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../utils/supabase";
 import PropertyForm from "./PropertyForm";
+import VendorAccountForm from "./VendorAccountForm";
 
 const ADD_PROPERTY_OPTION = "__add_property__";
+const ADD_VENDOR_ACCOUNT_OPTION = "__add_vendor_account__";
+
+async function invokeFunction(name, body, fallbackMessage) {
+  const { data, error } = await supabase.functions.invoke(name, { body });
+  if (error) {
+    const details = await error.context?.json?.().catch(() => null);
+    throw new Error(details?.error ?? fallbackMessage);
+  }
+  return data.data;
+}
+
+function fetchVendorAccounts(propertyId) {
+  return supabase
+    .from("vendor_account")
+    .select("id, account_number, service, vendor_id, vendor(name)")
+    .eq("property_id", propertyId);
+}
 
 // property and vendorAccount hold ids; the dropdowns show names
 const initialFormData = {
@@ -39,7 +57,7 @@ function BillDetailsForm({
   bill,
   initialValues,
   source = "manual",
-  allowCreateProperty = false,
+  allowCreateRecords = false,
   onSaved,
   onCancel,
 }) {
@@ -56,6 +74,10 @@ function BillDetailsForm({
   const [showPropertyForm, setShowPropertyForm] = useState(false);
   const [isCreatingProperty, setIsCreatingProperty] = useState(false);
   const [propertyFormError, setPropertyFormError] = useState("");
+  const [showVendorAccountForm, setShowVendorAccountForm] = useState(false);
+  const [isCreatingVendorAccount, setIsCreatingVendorAccount] =
+    useState(false);
+  const [vendorAccountFormError, setVendorAccountFormError] = useState("");
 
   // Plain reads go straight to the tables; only the insert needs the edge function
   useEffect(() => {
@@ -83,10 +105,7 @@ function BillDetailsForm({
     let ignore = false;
 
     async function loadVendorAccounts() {
-      const { data, error } = await supabase
-        .from("vendor_account")
-        .select("id, account_number, service, vendor(name)")
-        .eq("property_id", formData.property);
+      const { data, error } = await fetchVendorAccounts(formData.property);
 
       if (ignore) return;
       if (error) {
@@ -112,6 +131,12 @@ function BillDetailsForm({
       return;
     }
 
+    if (name === "vendorAccount" && value === ADD_VENDOR_ACCOUNT_OPTION) {
+      setVendorAccountFormError("");
+      setShowVendorAccountForm(true);
+      return;
+    }
+
     setFormData((currentForm) => ({
       ...currentForm,
       [name]: value,
@@ -128,19 +153,11 @@ function BillDetailsForm({
     setPropertyFormError("");
 
     try {
-      const { data, error } = await supabase.functions.invoke(
+      const newProperty = await invokeFunction(
         "create-property",
-        { body: propertyData },
+        propertyData,
+        "The property could not be created. Please try again.",
       );
-
-      if (error) {
-        const details = await error.context?.json?.().catch(() => null);
-        throw new Error(
-          details?.error ?? "The property could not be created. Please try again.",
-        );
-      }
-
-      const newProperty = data.data;
       setProperties((currentProperties) =>
         [...currentProperties, newProperty].sort((a, b) =>
           a.name.localeCompare(b.name),
@@ -161,6 +178,72 @@ function BillDetailsForm({
       );
     } finally {
       setIsCreatingProperty(false);
+    }
+  }
+
+  async function handleCreateVendorAccount({
+    vendorId,
+    vendorName,
+    accountNumber,
+    service,
+  }) {
+    setIsCreatingVendorAccount(true);
+    setVendorAccountFormError("");
+    const propertyId = formData.property;
+    const fallbackMessage =
+      "The vendor account could not be created. Please try again.";
+
+    try {
+      let accountVendorId = vendorId;
+      if (vendorId) {
+        await invokeFunction(
+          "create-vendor-account",
+          {
+            vendor_id: vendorId,
+            property_id: propertyId,
+            account_number: accountNumber,
+            service,
+          },
+          fallbackMessage,
+        );
+      } else {
+        const newVendor = await invokeFunction(
+          "create-vendor",
+          {
+            name: vendorName,
+            account_number: accountNumber,
+            service,
+            property_id: propertyId,
+          },
+          fallbackMessage,
+        );
+        accountVendorId = newVendor.id;
+      }
+
+      const { data, error } = await fetchVendorAccounts(propertyId);
+      if (error) {
+        throw new Error(
+          "The vendor account was created, but the list could not be reloaded. Refresh the page to see it.",
+        );
+      }
+
+      const newAccount = data.find(
+        (account) =>
+          account.vendor_id === accountVendorId &&
+          account.account_number === accountNumber,
+      );
+      setVendorAccounts(data);
+      setFormData((currentForm) => ({
+        ...currentForm,
+        vendorAccount: newAccount?.id ?? "",
+      }));
+      setShowVendorAccountForm(false);
+    } catch (error) {
+      setVendorAccountFormError(
+        error instanceof Error ? error.message : fallbackMessage,
+      );
+    } finally {
+      setIsCreatingVendorAccount(false);
     }
   }
 
@@ -241,7 +324,7 @@ function BillDetailsForm({
                 {property.name}
               </option>
             ))}
-            {allowCreateProperty && (
+            {allowCreateRecords && (
               <option value={ADD_PROPERTY_OPTION}>+ Add new property</option>
             )}
           </select>
@@ -275,6 +358,11 @@ function BillDetailsForm({
                   {account.service}
                 </option>
               ))}
+              {allowCreateRecords && formData.property && (
+                <option value={ADD_VENDOR_ACCOUNT_OPTION}>
+                  + Add vendor account
+                </option>
+              )}
             </select>
             {!formData.property && (
               <p id="vendorAccount-hint" className="mt-1 text-xs text-red-600">
@@ -438,6 +526,19 @@ function BillDetailsForm({
           error={propertyFormError}
           onCancel={() => setShowPropertyForm(false)}
           onSubmit={handleCreateProperty}
+        />
+      )}
+
+      {showVendorAccountForm && (
+        <VendorAccountForm
+          propertyName={
+            properties.find((property) => property.id === formData.property)
+              ?.name ?? ""
+          }
+          isSubmitting={isCreatingVendorAccount}
+          error={vendorAccountFormError}
+          onCancel={() => setShowVendorAccountForm(false)}
+          onSubmit={handleCreateVendorAccount}
         />
       )}
     </>

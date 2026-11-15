@@ -42,7 +42,7 @@ function ManualBillIntakePage() {
       </section>
 
       <section className="card mt-6">
-        <BillDetailsForm allowCreateProperty />
+        <BillDetailsForm allowCreateRecords />
       </section>
     </div>
   );
