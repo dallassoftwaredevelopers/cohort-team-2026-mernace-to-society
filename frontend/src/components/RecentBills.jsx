@@ -1,21 +1,17 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../utils/supabase";
+import StatusBadge from "./StatusBadge";
+import { formatCurrency, formatDate } from "../utils/format";
 
 const recentBillColumns = 6;
 
-function formatBillStatus(status) {
-  if (status === "needs_review") return "Needs Review";
-  return status ? status.charAt(0).toUpperCase() + status.slice(1) : "—";
-}
-
-function formatAmount(amount) {
-  if (amount == null) return "—";
-  return Number(amount).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-  });
-}
+// Below md each row becomes a card with a label beside every value
+const stackedRowClassName =
+  "mb-4 block rounded-lg bg-white p-4 md:mb-0 md:table-row md:rounded-none md:border-t md:border-secondary md:bg-transparent md:p-0";
+const stackedCellClassName =
+  "flex justify-between gap-4 py-1 md:table-cell md:px-4 md:py-4";
+const cellMessageClassName = "block px-4 py-8 text-center md:table-cell";
 
 function RecentBills() {
   const [bills, setBills] = useState([]);
@@ -54,12 +50,10 @@ function RecentBills() {
 
   return (
     <section className="card mt-8">
-      <h2 className="border-b border-black pb-4 text-lg font-bold">
-        Recent Bills
-      </h2>
-      <div className="mt-4 overflow-x-auto">
-        <table className="w-full min-w-[760px] text-left text-sm">
-          <thead>
+      <h2 className="section-title">Recent Bills</h2>
+      <div className="mt-4">
+        <table className="w-full text-left text-sm">
+          <thead className="hidden md:table-header-group">
             <tr className="text-xs uppercase">
               <th className="px-4 py-3 font-semibold">Bill #</th>
               <th className="px-4 py-3 font-semibold">Property</th>
@@ -69,66 +63,84 @@ function RecentBills() {
               <th className="px-4 py-3 font-semibold">Status</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="block md:table-row-group">
             {loading ? (
-              <tr>
+              <tr className="block md:table-row">
                 <td
                   colSpan={recentBillColumns}
-                  className="px-4 py-8 text-center text-gray-600"
+                  className={`${cellMessageClassName} text-gray-600`}
                   role="status"
                 >
                   Loading recent bills…
                 </td>
               </tr>
             ) : errorMessage ? (
-              <tr>
+              <tr className="block md:table-row">
                 <td
                   colSpan={recentBillColumns}
-                  className="px-4 py-8 text-center text-red-700"
+                  className={`${cellMessageClassName} text-red-700`}
                   role="alert"
                 >
                   {errorMessage}
                 </td>
               </tr>
             ) : bills.length === 0 ? (
-              <tr>
+              <tr className="block md:table-row">
                 <td
                   colSpan={recentBillColumns}
-                  className="px-4 py-8 text-center text-gray-600"
+                  className={`${cellMessageClassName} text-gray-600`}
                 >
                   No bills yet.
                 </td>
               </tr>
             ) : (
               bills.map((bill) => (
-                <tr key={bill.id} className="border-t border-gray-200">
-                  <td className="px-4 py-4">
-                    <Link
-                      to={`/bills/${bill.id}`}
-                      className="font-medium text-primary hover:text-primary-hover hover:underline"
-                    >
+                <tr key={bill.id} className={stackedRowClassName}>
+                  <td
+                    className={`${stackedCellClassName} md:whitespace-nowrap`}
+                  >
+                    <span className="font-semibold md:hidden">Bill #</span>
+                    <Link to={`/bills/${bill.id}`} className="link">
                       {bill.invoice_number ?? "—"}
                     </Link>
                   </td>
-                  <td className="px-4 py-4">{bill.property?.name ?? "—"}</td>
-                  <td className="px-4 py-4">
-                    {bill.vendor_account?.vendor?.name ??
-                      bill.extracted_vendor_name ??
-                      "—"}
+                  <td className={stackedCellClassName}>
+                    <span className="font-semibold md:hidden">Property</span>
+                    <span className="text-right md:text-left">
+                      {bill.property?.name ?? "—"}
+                    </span>
                   </td>
-                  <td className="px-4 py-4">{bill.due_date ?? "—"}</td>
-                  <td className="px-4 py-4">{formatAmount(bill.amount)}</td>
-                  <td className="px-4 py-4">{formatBillStatus(bill.status)}</td>
+                  <td className={stackedCellClassName}>
+                    <span className="font-semibold md:hidden">Vendor</span>
+                    <span className="text-right md:text-left">
+                      {bill.vendor_account?.vendor?.name ??
+                        bill.extracted_vendor_name ??
+                        "—"}
+                    </span>
+                  </td>
+                  <td
+                    className={`${stackedCellClassName} md:whitespace-nowrap`}
+                  >
+                    <span className="font-semibold md:hidden">Due Date</span>
+                    {formatDate(bill.due_date)}
+                  </td>
+                  <td
+                    className={`${stackedCellClassName} md:whitespace-nowrap`}
+                  >
+                    <span className="font-semibold md:hidden">Amount</span>
+                    {formatCurrency(bill.amount)}
+                  </td>
+                  <td className={stackedCellClassName}>
+                    <span className="font-semibold md:hidden">Status</span>
+                    <StatusBadge status={bill.status} />
+                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
-      <Link
-        to="/bills"
-        className="mt-4 inline-block font-semibold text-primary hover:text-primary-hover hover:underline"
-      >
+      <Link to="/bills" className="link mt-4 inline-block">
         All Bills
       </Link>
     </section>

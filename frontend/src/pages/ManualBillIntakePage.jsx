@@ -11,10 +11,8 @@ function ManualBillIntakePage() {
     return (
       <div className="mx-auto max-w-3xl">
         <section className="card">
-          <h1 className="font-serif text-2xl font-bold">
-            Manual bill entry unavailable
-          </h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <h1 className="page-title">Manual bill entry unavailable</h1>
+          <p className="page-subtitle">
             Your role allows you to upload and view bills. Contact a manager or
             administrator if a bill needs to be entered manually.
           </p>
@@ -33,15 +31,13 @@ function ManualBillIntakePage() {
     <div className="mx-auto max-w-3xl">
       <section className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-serif text-2xl font-bold">
-            Add bill details manually
-          </h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <h1 className="page-title">Add bill details manually</h1>
+          <p className="page-subtitle">
             Enter the same details used when reviewing an uploaded bill.
           </p>
         </div>
-        <Link to="/bills" className="btn-secondary px-4 py-2 text-sm">
-          &larr; Return to Bills
+        <Link to="/bills" className="link text-sm">
+          &larr; Back to Bills
         </Link>
       </section>
 

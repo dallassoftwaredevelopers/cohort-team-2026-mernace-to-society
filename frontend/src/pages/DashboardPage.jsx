@@ -104,10 +104,10 @@ function DashboardPage() {
     <>
       <section className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-serif text-2xl font-bold">
+          <h1 className="page-title">
             Welcome Back, {profile?.name || authUser?.email || "there"}
           </h1>
-          <p className="mt-2 text-sm">
+          <p className="page-subtitle">
             Review pending property bills, track expenses, and record payments.
           </p>
         </div>
@@ -122,7 +122,7 @@ function DashboardPage() {
               + Add Bill ▾
             </button>
             {open && (
-              <div className="absolute left-0 z-10 mt-2 w-48 rounded-lg border border-secondary bg-white py-2 shadow-lg sm:left-auto sm:right-0">
+              <div className="absolute left-0 z-10 mt-2 w-48 rounded-lg border border-secondary bg-white py-2 shadow-lg">
                 {(canEditRecords
                   ? [
                       { label: "Enter Manually", path: "/bills/manual" },
@@ -173,7 +173,7 @@ function DashboardPage() {
       </section>
 
       {successMessage && (
-        <p role="status" className="mt-4 text-sm text-green-700">
+        <p role="status" className="alert-success mt-4">
           {successMessage}
         </p>
       )}
