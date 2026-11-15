@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../../utils/supabase";
+import StatusBadge from "../components/StatusBadge";
+import { formatCurrency, formatDate, formatDateTime } from "../utils/format";
 
 const tabs = ["Pending", "Needs Review", "Approved", "Rejected"];
 const cellMessageClassName = "px-4 py-12 text-center text-gray-600";
@@ -30,30 +33,12 @@ const hideOnMobile = (mobile) => (mobile ? "" : "hidden md:table-cell");
 
 // Queue rows have actions, so below md each row stacks into a labeled card
 const stackedRowClassName =
-  "mb-4 block rounded-lg bg-white p-4 md:mb-0 md:table-row md:rounded-none md:bg-transparent md:p-0 md:border-t md:border-gray-200";
+  "mb-4 block rounded-lg bg-white p-4 md:mb-0 md:table-row md:rounded-none md:bg-transparent md:p-0 md:border-t md:border-secondary";
 const stackedCellClassName =
   "flex justify-between gap-4 py-1 md:table-cell md:px-3 md:py-3";
 
 function MobileLabel({ children }) {
   return <span className="font-semibold md:hidden">{children}</span>;
-}
-
-function formatCurrency(value) {
-  if (value == null) return "—";
-  return Number(value).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-  });
-}
-
-function formatDate(value) {
-  if (!value) return "—";
-  return new Date(`${value.slice(0, 10)}T00:00:00`).toLocaleDateString();
-}
-
-function formatDateTime(value) {
-  if (!value) return "—";
-  return new Date(value).toLocaleString();
 }
 
 function getVendorName(bill) {
@@ -73,11 +58,6 @@ function missingForApproval(bill) {
   ]
     .filter(([present]) => !present)
     .map(([, label]) => label);
-}
-
-function formatBillStatus(status) {
-  if (status === "needs_review") return "Needs Review";
-  return status;
 }
 
 function ApprovalsPage() {
@@ -283,33 +263,24 @@ function ApprovalsPage() {
   return (
     <>
       <section>
-        <h1 className="font-serif text-2xl font-bold">Approvals</h1>
-        <p className="mt-2 text-sm text-gray-600">
+        <h1 className="page-title">Approvals</h1>
+        <p className="page-subtitle">
           Review pending bills and track approval decisions.
         </p>
       </section>
 
       {errorMessage && (
-        <p
-          role="alert"
-          className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-800"
-        >
+        <p role="alert" className="alert-error mt-4">
           {errorMessage}
         </p>
       )}
       {decisionError && (
-        <p
-          role="alert"
-          className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-800"
-        >
+        <p role="alert" className="alert-error mt-4">
           {decisionError}
         </p>
       )}
       {actionMessage && (
-        <p
-          role="status"
-          className="mt-4 rounded-md bg-green-50 p-3 text-sm text-green-800"
-        >
+        <p role="status" className="alert-success mt-4">
           {actionMessage}
         </p>
       )}
@@ -331,7 +302,7 @@ function ApprovalsPage() {
       </section>
 
       <section className="card mt-8">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-black pb-4">
+        <div className="section-header">
           <h2 className="text-lg font-bold">Approval Queue</h2>
           <div className="flex flex-wrap gap-2">
             {tabs.map((tab) => (
@@ -342,7 +313,7 @@ function ApprovalsPage() {
                 aria-pressed={activeTab === tab}
                 className={`${
                   activeTab === tab ? "btn-primary" : "btn-secondary"
-                } cursor-pointer px-4 py-2 text-xs`}
+                } px-4 py-2 text-xs`}
               >
                 {tab}
               </button>
@@ -391,9 +362,13 @@ function ApprovalsPage() {
             ) : (
               filteredBills.map((bill) => (
                 <tr key={bill.id} className={stackedRowClassName}>
-                  <td className={stackedCellClassName}>
+                  <td
+                    className={`${stackedCellClassName} md:whitespace-nowrap`}
+                  >
                     <MobileLabel>Invoice #</MobileLabel>
-                    {bill.invoice_number || "—"}
+                    <Link to={`/bills/${bill.id}`} className="link">
+                      {bill.invoice_number || "—"}
+                    </Link>
                   </td>
                   <td className={stackedCellClassName}>
                     <MobileLabel>Property</MobileLabel>
@@ -411,11 +386,15 @@ function ApprovalsPage() {
                       )}
                     </span>
                   </td>
-                  <td className={stackedCellClassName}>
+                  <td
+                    className={`${stackedCellClassName} md:whitespace-nowrap`}
+                  >
                     <MobileLabel>Amount</MobileLabel>
                     {formatCurrency(bill.amount)}
                   </td>
-                  <td className={stackedCellClassName}>
+                  <td
+                    className={`${stackedCellClassName} md:whitespace-nowrap`}
+                  >
                     <MobileLabel>Due Date</MobileLabel>
                     {formatDate(bill.due_date)}
                   </td>
@@ -429,16 +408,16 @@ function ApprovalsPage() {
                       {bill.review_reason || "—"}
                     </span>
                   </td>
-                  <td className={`${stackedCellClassName} capitalize`}>
+                  <td className={stackedCellClassName}>
                     <MobileLabel>Status</MobileLabel>
-                    {formatBillStatus(bill.status)}
+                    <StatusBadge status={bill.status} />
                   </td>
                   <td className="block pt-3 md:table-cell md:px-3 md:py-3">
                     <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => setSelectedBill(bill)}
-                        className="btn-secondary flex-1 cursor-pointer px-3 py-2 text-xs md:flex-none"
+                        className="btn-secondary flex-1 px-3 py-2 text-xs md:flex-none"
                       >
                         View
                       </button>
@@ -452,7 +431,7 @@ function ApprovalsPage() {
                                 setRejectionBill(bill);
                                 setRejectionReason("");
                               }}
-                              className="btn-secondary flex-1 cursor-pointer px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60 md:flex-none"
+                              className="btn-secondary flex-1 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60 md:flex-none"
                             >
                               Reject
                             </button>
@@ -460,7 +439,7 @@ function ApprovalsPage() {
                               type="button"
                               disabled={isSubmitting}
                               onClick={() => handleApprove(bill)}
-                              className="btn-primary flex-1 cursor-pointer px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60 md:flex-none"
+                              className="btn-primary flex-1 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60 md:flex-none"
                             >
                               Approve
                             </button>
@@ -470,7 +449,7 @@ function ApprovalsPage() {
                         <button
                           type="button"
                           // TODO: open the payment flow once payments are built
-                          className="btn-primary flex-1 cursor-pointer px-3 py-2 text-xs md:flex-none"
+                          className="btn-primary flex-1 px-3 py-2 text-xs md:flex-none"
                         >
                           Pay
                         </button>
@@ -485,9 +464,7 @@ function ApprovalsPage() {
       </section>
 
       <section className="card mt-8">
-        <h2 className="border-b border-black pb-4 text-lg font-bold">
-          Approval History
-        </h2>
+        <h2 className="section-title">Approval History</h2>
         <table className="mt-4 w-full rounded-lg bg-white text-left text-sm">
           <thead>
             <tr className="text-xs uppercase">
@@ -522,7 +499,7 @@ function ApprovalsPage() {
               </tr>
             ) : (
               history.map((entry) => (
-                <tr key={entry.id} className="border-t border-gray-200">
+                <tr key={entry.id} className="border-t border-secondary">
                   <td className="px-3 py-3">
                     {formatDateTime(entry.created_at)}
                   </td>
@@ -553,7 +530,7 @@ function ApprovalsPage() {
             aria-labelledby="bill-details-title"
             className="my-auto w-full max-w-xl rounded-xl bg-white p-4 shadow-xl sm:p-6"
           >
-            <div className="flex items-center justify-between border-b border-gray-200 pb-4">
+            <div className="flex items-center justify-between border-b border-secondary pb-4">
               <h2 id="bill-details-title" className="text-xl font-bold">
                 Bill Details
               </h2>
@@ -563,7 +540,7 @@ function ApprovalsPage() {
                   setSelectedBill(null);
                   setFileError("");
                 }}
-                className="cursor-pointer rounded-lg p-2 text-2xl leading-none text-gray-500 hover:text-black"
+                className="rounded-lg p-2 text-2xl leading-none text-gray-500 hover:text-black"
                 aria-label="Close details"
               >
                 &times;
@@ -578,7 +555,10 @@ function ApprovalsPage() {
                 ["Issue Date", formatDate(selectedBill.issue_date)],
                 ["Due Date", formatDate(selectedBill.due_date)],
                 ["Source", selectedBill.source],
-                ["Status", formatBillStatus(selectedBill.status)],
+                [
+                  "Status",
+                  <StatusBadge key="status" status={selectedBill.status} />,
+                ],
                 ["Review Reason", selectedBill.review_reason],
                 ["Rejection Reason", selectedBill.rejection_reason],
               ].map(([label, value]) => (
@@ -592,7 +572,7 @@ function ApprovalsPage() {
             </dl>
             {/* Only uploaded bills have a file; check it against the numbers above */}
             {selectedBill.source === "upload" && (
-              <div className="mt-6 border-t border-gray-200 pt-4">
+              <div className="mt-6 border-t border-secondary pt-4">
                 <button
                   type="button"
                   onClick={() => openOriginal(selectedBill)}
@@ -609,7 +589,7 @@ function ApprovalsPage() {
               </div>
             )}
             {selectedBill.status === "approved" && canApprove && (
-              <div className="mt-6 flex justify-end border-t border-gray-200 pt-4">
+              <div className="mt-6 flex justify-end border-t border-secondary pt-4">
                 <button
                   type="button"
                   // TODO: open the payment flow once payments are built
@@ -639,10 +619,7 @@ function ApprovalsPage() {
               {rejectionBill.invoice_number || "without an invoice number"}.
             </p>
             <form onSubmit={handleReject} className="mt-4 space-y-4">
-              <label
-                htmlFor="rejection-reason"
-                className="block text-sm font-medium"
-              >
+              <label htmlFor="rejection-reason" className="label">
                 Rejection reason
               </label>
               <textarea
@@ -652,9 +629,8 @@ function ApprovalsPage() {
                 maxLength={2000}
                 rows={4}
                 required
-                className="w-full rounded-md border border-gray-300 p-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="input"
               />
-              {/* Shown here too, since the page's message is behind this dialog */}
               {decisionError && (
                 <p role="alert" className="text-sm text-red-700">
                   {decisionError}
@@ -668,14 +644,14 @@ function ApprovalsPage() {
                     setRejectionBill(null);
                     setDecisionError("");
                   }}
-                  className="btn-secondary cursor-pointer px-4 py-2 text-sm disabled:cursor-not-allowed"
+                  className="btn-secondary px-4 py-2 text-sm disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting || !rejectionReason.trim()}
-                  className="btn-primary cursor-pointer px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                  className="btn-primary px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSubmitting ? "Saving…" : "Reject Bill"}
                 </button>
