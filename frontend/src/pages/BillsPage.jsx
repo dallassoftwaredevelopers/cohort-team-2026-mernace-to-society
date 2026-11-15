@@ -1,5 +1,5 @@
 import BillDetailsForm from "../components/BillDetailsForm";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../utils/supabase";
 import { useUserProfile } from "../hooks/useUserProfile";
@@ -26,7 +26,18 @@ const stackedRowClassName =
 const stackedCellClassName =
   "flex justify-between gap-4 py-1 md:table-cell md:px-4 md:py-3";
 
+// Status filter values; a ?status= in the URL must be one of these
+const statusOptions = [
+  "pending",
+  "needs_review",
+  "extraction_failed",
+  "approved",
+  "paid",
+  "rejected",
+];
+
 function BillsPage() {
+  const [searchParams] = useSearchParams();
   const [open, setOpen] = useState(false);
   const [bills, setBills] = useState([]);
   const [properties, setProperties] = useState([]);
@@ -37,7 +48,11 @@ function BillsPage() {
 
   // Filter & Sort States
   const [filterProperty, setFilterProperty] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
+  // Starts from ?status= so dashboard cards can open a filtered list
+  const [filterStatus, setFilterStatus] = useState(() => {
+    const status = searchParams.get("status");
+    return statusOptions.includes(status) ? status : "all";
+  });
   const [sortBy, setSortBy] = useState("due_date_asc");
 
   const navigate = useNavigate();
@@ -188,9 +203,9 @@ function BillsPage() {
 
       {/* Filter & Sort Controls Bar */}
       <section className="card mt-6 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
           {/* Property Filter */}
-          <div>
+          <div className="w-full sm:w-52">
             <label htmlFor="filter-property" className="label">
               Property
             </label>
@@ -198,7 +213,7 @@ function BillsPage() {
               id="filter-property"
               value={filterProperty}
               onChange={(e) => setFilterProperty(e.target.value)}
-              className="input"
+              className="input select"
             >
               <option value="all">All Properties</option>
               {properties.map((prop) => (
@@ -210,7 +225,7 @@ function BillsPage() {
           </div>
 
           {/* Status Filter */}
-          <div>
+          <div className="w-full sm:w-52">
             <label htmlFor="filter-status" className="label">
               Status
             </label>
@@ -218,7 +233,7 @@ function BillsPage() {
               id="filter-status"
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="input"
+              className="input select"
             >
               <option value="all">All Statuses</option>
               <option value="pending">Pending</option>
@@ -232,7 +247,7 @@ function BillsPage() {
         </div>
 
         {/* Sort Controls */}
-        <div>
+        <div className="w-full sm:w-64">
           <label htmlFor="sort-by" className="label">
             Sort By
           </label>
@@ -240,7 +255,7 @@ function BillsPage() {
             id="sort-by"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="input"
+            className="input select"
           >
             <option value="due_date_asc">Due Date (Earliest First)</option>
             <option value="due_date_desc">Due Date (Latest First)</option>
