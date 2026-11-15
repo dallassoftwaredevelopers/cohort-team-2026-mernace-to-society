@@ -10,8 +10,7 @@ const emptyProperty = {
   status: "inactive",
 };
 
-const inputClassName =
-  "w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
+const inputClassName = "input";
 
 function PropertyForm({
   initialValues = emptyProperty,
@@ -41,7 +40,7 @@ function PropertyForm({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
+    <div className="modal-overlay">
       <div className="my-auto w-full max-w-2xl rounded-xl bg-white p-4 shadow-xl sm:p-6">
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-xl font-bold">
@@ -60,10 +59,7 @@ function PropertyForm({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label
-              htmlFor="property-name"
-              className="mb-1 block text-sm font-medium"
-            >
+            <label htmlFor="property-name" className="label">
               Property Name
             </label>
             <input
@@ -80,10 +76,7 @@ function PropertyForm({
           </div>
 
           <div>
-            <label
-              htmlFor="property-type"
-              className="mb-1 block text-sm font-medium"
-            >
+            <label htmlFor="property-type" className="label">
               Property Type
             </label>
             <select
@@ -91,7 +84,7 @@ function PropertyForm({
               name="type"
               value={formData.type}
               onChange={handleChange}
-              className={inputClassName}
+              className={`${inputClassName} select`}
               required
             >
               <option value="" disabled>
@@ -105,10 +98,7 @@ function PropertyForm({
           </div>
 
           <div>
-            <label
-              htmlFor="property-street"
-              className="mb-1 block text-sm font-medium"
-            >
+            <label htmlFor="property-street" className="label">
               Street Address
             </label>
             <input
@@ -124,10 +114,7 @@ function PropertyForm({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label
-                htmlFor="property-city"
-                className="mb-1 block text-sm font-medium"
-              >
+              <label htmlFor="property-city" className="label">
                 City
               </label>
               <input
@@ -142,10 +129,7 @@ function PropertyForm({
             </div>
 
             <div>
-              <label
-                htmlFor="property-state"
-                className="mb-1 block text-sm font-medium"
-              >
+              <label htmlFor="property-state" className="label">
                 State
               </label>
               <input
@@ -160,10 +144,7 @@ function PropertyForm({
             </div>
 
             <div>
-              <label
-                htmlFor="property-zip"
-                className="mb-1 block text-sm font-medium"
-              >
+              <label htmlFor="property-zip" className="label">
                 ZIP Code
               </label>
               <input
@@ -181,10 +162,7 @@ function PropertyForm({
             </div>
 
             <div>
-              <label
-                htmlFor="property-status"
-                className="mb-1 block text-sm font-medium"
-              >
+              <label htmlFor="property-status" className="label">
                 Status
               </label>
               <select
@@ -192,7 +170,7 @@ function PropertyForm({
                 name="status"
                 value={formData.status}
                 onChange={handleChange}
-                className={inputClassName}
+                className={`${inputClassName} select`}
               >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -201,12 +179,12 @@ function PropertyForm({
           </div>
 
           {error && (
-            <p role="alert" className="text-sm text-red-700">
+            <p role="alert" className="alert-error">
               {error}
             </p>
           )}
 
-          <div className="flex flex-col-reverse gap-2 border-t border-section pt-5 sm:flex-row sm:justify-end sm:gap-3">
+          <div className="flex flex-col-reverse gap-2 border-t border-secondary pt-5 sm:flex-row sm:justify-end sm:gap-3">
             <button
               type="button"
               onClick={onCancel}
