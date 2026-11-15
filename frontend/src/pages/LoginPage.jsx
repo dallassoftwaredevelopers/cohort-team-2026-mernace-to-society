@@ -22,75 +22,83 @@ const LoginPage = () => {
     setErrorMessage("");
     setInfoMessage("");
 
-    let result;
-    if (isSignUp) {
-      const trimmedName = name.trim();
-      if (!trimmedName) {
-        setErrorMessage("Enter your full name.");
-        setIsSubmitting(false);
+    try {
+      let result;
+      if (isSignUp) {
+        const trimmedName = name.trim();
+        if (!trimmedName) {
+          setErrorMessage("Enter your full name.");
+          return;
+        }
+
+        result = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            data: {
+              name: trimmedName,
+            },
+          },
+        });
+      } else {
+        result = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+      }
+
+      const { data, error } = result;
+      const accountAlreadyExists =
+        isSignUp && (error?.code === "user_already_exists" ||
+        (!error && data.user && data.user.identities?.length === 0));
+
+      if (accountAlreadyExists) {
+        setInfoMessage("If you already have an account, try logging in or contact your administrator if access is inactive.");
+        setPassword("");
         return;
       }
 
-      result = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name: trimmedName,
-          },
-        },
-      });
-    } else {
-      result = await supabase.auth.signInWithPassword ({
-        email: email,
-        password: password,
-      })
-    }
+      if (error) {
+        const isBannedAccount =
+          error.code === "user_banned" ||
+          error.message?.toLowerCase().includes("banned");
+        setErrorMessage(
+          isBannedAccount
+            ? "Your account access is inactive. Contact your organization administrator for access."
+            : error.message,
+        );
+        return;
+      }
 
-    const { data, error } = result;
-    setIsSubmitting(false);
+      if (isSignUp && !data.user) {
+        setErrorMessage("Could not create your account. Please try again.");
+        return;
+      }
 
-    const accountAlreadyExists = 
-      isSignUp && (error?.code === "user_already_exists" || 
-      (!error && data.user && data.user.identifies?.length === 0));
+      if (isSignUp && !data.session) {
+        setInfoMessage("If your signup was successful, your account is awaiting administrator approval. If email confirmation is required, check your email before logging in. If you already have an account, log in or contact your administrator.");
+        return;
+      }
 
-    if (accountAlreadyExists) {
-      setErrorMessage("An Account with this email already exists. Please log in instead.");
-      setIsSignUp(false);
-      setPassword("");
-      return;
-    }
-
-    if (error) {
-      const isBannedAccount =
-        error.code === "user_banned" ||
-        error.message?.toLowerCase().includes("banned");
-      setErrorMessage(
-        isBannedAccount
-          ? "Your account access is inactive. Contact your organization administrator for access."
-          : error.message,
+      const destination = location.state?.from;
+      navigate(
+        destination
+          ? `${destination.pathname}${destination.search ?? ""}${destination.hash ?? ""}`
+          : "/dashboard",
+        { replace: true },
       );
-      return;
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Could not complete your request. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    if (isSignUp && !data.session) {
-      setInfoMessage("Account created! Check your email to confirm it, then log in.");
-      return;
-    }
-
-    const destination = location.state?.from;
-    navigate(
-      destination
-        ? `${destination.pathname}${destination.search ?? ""}${destination.hash ?? ""}`
-        : "/dashboard",
-      { replace: true },
-    );
   }
 
   function handleToggleMode() {
     setIsSignUp(!isSignUp);
     setPassword("");
     setErrorMessage("");
+    setInfoMessage("");
   }
 
   let logInSignUpSubmitButtonLabel;
