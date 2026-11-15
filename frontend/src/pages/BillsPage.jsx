@@ -414,7 +414,7 @@ function BillsPage() {
       </section>
 
       {canEditRecords && editingBill && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
+        <div className="modal-overlay">
           <div className="my-auto w-full max-w-2xl rounded-xl bg-white p-4 shadow-xl sm:p-6">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold">Edit Bill</h2>

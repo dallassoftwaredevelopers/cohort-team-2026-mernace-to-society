@@ -12,8 +12,7 @@ const emptyVendor = {
   property_id: "",
 };
 
-const inputClassName =
-  "w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
+const inputClassName = "input";
 
 function VendorForm({
   isSubmitting = false,
@@ -107,7 +106,7 @@ function VendorForm({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
+    <div className="modal-overlay">
       <div className="my-auto w-full max-w-2xl rounded-xl bg-white p-4 shadow-xl sm:p-6">
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-xl font-bold">
@@ -130,7 +129,7 @@ function VendorForm({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="vendor-name" className="mb-1 block text-sm font-medium">
+            <label htmlFor="vendor-name" className="label">
               Vendor Name
             </label>
             <input
@@ -140,7 +139,7 @@ function VendorForm({
               value={formData.name}
               onChange={handleChange}
               readOnly={addAccountMode}
-              className={inputClassName}
+              className={`${inputClassName} ${addAccountMode ? "bg-gray-100" : ""}`}
               placeholder="Florida Power & Light"
               maxLength={100}
               required={!addAccountMode}
@@ -148,7 +147,7 @@ function VendorForm({
           </div>
 
           <div>
-            <label htmlFor="vendor-aliases" className="mb-1 block text-sm font-medium">
+            <label htmlFor="vendor-aliases" className="label">
               Aliases
             </label>
             <textarea
@@ -157,7 +156,7 @@ function VendorForm({
               value={formData.aliases}
               onChange={handleChange}
               readOnly={addAccountMode}
-              className={inputClassName}
+              className={`${inputClassName} ${addAccountMode ? "bg-gray-100" : ""}`}
               placeholder={"FPL\nFlorida Power"}
               rows={3}
             />
@@ -167,7 +166,7 @@ function VendorForm({
           </div>
 
           <div>
-            <label htmlFor="vendor-portal-url" className="mb-1 block text-sm font-medium">
+            <label htmlFor="vendor-portal-url" className="label">
               Portal URL
             </label>
             <input
@@ -177,14 +176,14 @@ function VendorForm({
               value={formData.portal_url}
               onChange={handleChange}
               readOnly={addAccountMode}
-              className={inputClassName}
+              className={`${inputClassName} ${addAccountMode ? "bg-gray-100" : ""}`}
               placeholder="https://example.com"
               maxLength={2048}
             />
           </div>
 
           <div>
-            <label htmlFor="vendor-email" className="mb-1 block text-sm font-medium">
+            <label htmlFor="vendor-email" className="label">
               Email
             </label>
             <input
@@ -194,13 +193,13 @@ function VendorForm({
               value={formData.email}
               onChange={handleChange}
               readOnly={addAccountMode}
-              className={inputClassName}
+              className={`${inputClassName} ${addAccountMode ? "bg-gray-100" : ""}`}
               placeholder="billing@example.com"
             />
           </div>
 
           <div>
-            <label htmlFor="vendor-phone" className="mb-1 block text-sm font-medium">
+            <label htmlFor="vendor-phone" className="label">
               Phone Number
             </label>
             <input
@@ -210,7 +209,7 @@ function VendorForm({
               value={formData.phone_number}
               onChange={handleChange}
               readOnly={addAccountMode}
-              className={inputClassName}
+              className={`${inputClassName} ${addAccountMode ? "bg-gray-100" : ""}`}
               placeholder="(555) 555-5555"
             />
           </div>
@@ -222,7 +221,7 @@ function VendorForm({
               </legend>
 
               <div>
-                <label htmlFor="vendor-account-number" className="mb-1 block text-sm font-medium">
+                <label htmlFor="vendor-account-number" className="label">
                   Account Number
                 </label>
                 <input
@@ -237,7 +236,7 @@ function VendorForm({
               </div>
 
               <div>
-                <label htmlFor="vendor-service" className="mb-1 block text-sm font-medium">
+                <label htmlFor="vendor-service" className="label">
                   Service Type
                 </label>
                 <input
@@ -253,7 +252,7 @@ function VendorForm({
               </div>
 
               <div>
-                <label htmlFor="vendor-property" className="mb-1 block text-sm font-medium">
+                <label htmlFor="vendor-property" className="label">
                   Property
                 </label>
                 <select
@@ -261,7 +260,7 @@ function VendorForm({
                   name="property_id"
                   value={formData.property_id}
                   onChange={handleChange}
-                  className={inputClassName}
+                  className={`${inputClassName} select`}
                   disabled={propertiesLoading}
                   required={accountRequired}
                 >
@@ -280,11 +279,13 @@ function VendorForm({
                 </select>
                 {propertiesError && (
                   <div className="mt-1 text-sm text-red-700">
-                    <p role="alert">Could not load properties: {propertiesError}</p>
+                    <p role="alert">
+                      Could not load properties: {propertiesError}
+                    </p>
                     <button
                       type="button"
                       onClick={() => fetchProperties().catch(() => {})}
-                      className="mt-1 font-semibold underline"
+                      className="link mt-1"
                     >
                       Retry
                     </button>
@@ -301,12 +302,12 @@ function VendorForm({
           )}
 
           {error && (
-            <p role="alert" className="text-sm text-red-700">
+            <p role="alert" className="alert-error">
               {error}
             </p>
           )}
 
-          <div className="flex flex-col-reverse gap-2 border-t border-section pt-5 sm:flex-row sm:justify-end sm:gap-3">
+          <div className="flex flex-col-reverse gap-2 border-t border-secondary pt-5 sm:flex-row sm:justify-end sm:gap-3">
             <button
               type="button"
               onClick={onCancel}
@@ -334,6 +335,5 @@ function VendorForm({
     </div>
   );
 }
-
 
 export default VendorForm;

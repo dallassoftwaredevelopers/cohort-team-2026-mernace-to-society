@@ -97,4 +97,8 @@
     background-position: right 0.75rem center;
     background-size: 1.25rem;
   }
+
+  .modal-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4 md:pl-68;
+  }
 }

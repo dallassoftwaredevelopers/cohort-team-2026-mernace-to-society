@@ -523,7 +523,7 @@ function ApprovalsPage() {
         </table>
       </section>
       {selectedBill && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
+        <div className="modal-overlay">
           <section
             role="dialog"
             aria-modal="true"
@@ -604,7 +604,7 @@ function ApprovalsPage() {
       )}
 
       {rejectionBill && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
+        <div className="modal-overlay">
           <section
             role="dialog"
             aria-modal="true"
