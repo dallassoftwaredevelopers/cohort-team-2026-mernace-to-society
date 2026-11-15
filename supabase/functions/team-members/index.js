@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { withSupabase } from "jsr:@supabase/server@^1";
+import { validateTeamMemberUpdate } from "./validateTeamMemberUpdate.js";
 
 export default {
 	fetch: withSupabase({ auth: "user" }, async (req, { supabase }) => {
@@ -50,7 +51,7 @@ export default {
 			currentUser.role?.toLowerCase() !== "admin"
 		) {
 			return Response.json(
-				{ error: "Only organization admins can change member status." },
+				{ error: "Only organization admins can change team members." },
 				{ status: 403 },
 			);
 		}
@@ -100,33 +101,17 @@ export default {
 				);
 			}
 
-			if (
-				typeof body !== "object" ||
-				body === null ||
-				Array.isArray(body) ||
-				typeof body.userId !== "string" ||
-				!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.userId) ||
-				!["active", "inactive"].includes(body.status)
-			) {
+			const validationError = validateTeamMemberUpdate(body, currentUser.id);
+			if (validationError) {
 				return Response.json(
-					{ error: "A userId and valid status are required." },
-					{ status: 400 },
-				);
-			}
-
-			if (
-				body.userId === currentUser.id &&
-				body.status === "inactive"
-			) {
-				return Response.json(
-					{ error: "You cannot set your own account to inactive." },
+					{ error: validationError },
 					{ status: 400 },
 				);
 			}
 
 			const { data: targetUser, error: targetUserError } = await adminClient
 				.from("user")
-				.select("id, status")
+				.select("id, status, role")
 				.eq("id", body.userId)
 				.eq("org_id", organization.id)
 				.maybeSingle();
@@ -144,9 +129,13 @@ export default {
 				);
 			}
 
+			const updates = {};
+			if (body.status !== undefined) updates.status = body.status;
+			if (body.role !== undefined) updates.role = body.role;
+
 			const { error: statusUpdateError } = await adminClient
 				.from("user")
-				.update({ status: body.status })
+				.update(updates)
 				.eq("id", targetUser.id)
 				.eq("org_id", organization.id);
 
@@ -157,26 +146,28 @@ export default {
 				);
 			}
 
-			const { error: authUpdateError } =
-				await adminClient.auth.admin.updateUserById(targetUser.id, {
-					ban_duration: body.status === "inactive" ? "876000h" : "none",
-				});
+			if (body.status !== undefined && body.status !== targetUser.status) {
+				const { error: authUpdateError } =
+					await adminClient.auth.admin.updateUserById(targetUser.id, {
+						ban_duration: body.status === "inactive" ? "876000h" : "none",
+					});
 
-			if (authUpdateError) {
-				const { error: rollbackError } = await adminClient
-					.from("user")
-					.update({ status: targetUser.status })
-					.eq("id", targetUser.id)
-					.eq("org_id", organization.id);
+				if (authUpdateError) {
+					const { error: rollbackError } = await adminClient
+						.from("user")
+						.update({ status: targetUser.status, role: targetUser.role })
+						.eq("id", targetUser.id)
+						.eq("org_id", organization.id);
 
-				return Response.json(
-					{
-						error: rollbackError
-							? `Could not update Auth access (${authUpdateError.message}) or restore the profile status (${rollbackError.message}).`
-							: `Could not update Auth access; profile status was restored. ${authUpdateError.message}`,
-					},
-					{ status: 500 },
-				);
+					return Response.json(
+						{
+							error: rollbackError
+								? `Could not update Auth access (${authUpdateError.message}) or restore the profile (${rollbackError.message}).`
+								: `Could not update Auth access; the profile was restored. ${authUpdateError.message}`,
+						},
+						{ status: 500 },
+					);
+				}
 			}
 		}
 
