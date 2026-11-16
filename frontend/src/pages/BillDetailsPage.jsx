@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import BillDetailsForm from "../components/BillDetailsForm";
 import FinishBillPanel from "../components/FinishBillPanel";
-import { supabase } from "../../utils/supabase";
 import { useUserProfile } from "../hooks/useUserProfile";
+import { useBillDetails } from "../hooks/useBillDetails";
 import { canManageRecords } from "../utils/permissions";
 import StatusBadge from "../components/StatusBadge";
 import { formatCurrency, formatDate } from "../utils/format";
@@ -11,61 +11,24 @@ import { formatCurrency, formatDate } from "../utils/format";
 // Saved bills that can't go to approval until someone fills in what's missing
 const UNFINISHED = ["needs_review", "extraction_failed"];
 
+// Only link to real web pages, never javascript: or other schemes
+function isWebUrl(url) {
+  return /^https?:\/\//i.test(url ?? "");
+}
+
 function BillDetailsPage() {
   const { billId } = useParams();
   const navigate = useNavigate();
   const { profile } = useUserProfile();
   const canEditRecords = canManageRecords(profile?.role);
 
-  const [bill, setBill] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { bill, loading, error, fetchBillDetails } = useBillDetails();
   const [successMessage, setSuccessMessage] = useState("");
   const [showEditForm, setShowEditForm] = useState(false);
 
-  const fetchBillDetails = async () => {
-    if (!billId) {
-      setError("Bill ID is required.");
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      const { data, error: fetchError } = await supabase
-        .from("bill")
-        .select(
-          `
-          *,
-          property(id, name, street, city, state, zip),
-          vendor_account(
-            id,
-            account_number,
-            service,
-            vendor(name)
-          )
-        `,
-        )
-        .eq("id", billId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      setBill(data);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to retrieve bill details.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchBillDetails();
-  }, [billId]);
+    fetchBillDetails(billId);
+  }, [billId, fetchBillDetails]);
 
   async function handleBillSaved(updatedBill) {
     setSuccessMessage(
@@ -76,7 +39,7 @@ function BillDetailsPage() {
     setShowEditForm(false);
     if (updatedBill) {
       // Re-fetch to get fresh joined relations
-      await fetchBillDetails();
+      await fetchBillDetails(billId);
     }
   }
 
@@ -177,7 +140,7 @@ function BillDetailsPage() {
               ))}
             </div>
 
-            {bill.bill_url && (
+            {isWebUrl(bill.bill_url) && (
               <div className="mt-6 border-t border-secondary pt-4">
                 <p className="text-sm text-gray-500">Bill URL</p>
                 <p className="mt-1">
@@ -185,7 +148,7 @@ function BillDetailsPage() {
                     href={bill.bill_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm font-semibold text-blue-600 hover:underline break-all"
+                    className="link text-sm break-all"
                   >
                     {bill.bill_url}
                   </a>
@@ -195,7 +158,6 @@ function BillDetailsPage() {
 
             {/* The finish panel shows the reason itself */}
             {bill.review_reason && !isUnfinished && (
-
               <div className="mt-6 border-t border-secondary pt-4">
                 <p className="text-sm text-gray-500">
                   Review Comments / Reason
