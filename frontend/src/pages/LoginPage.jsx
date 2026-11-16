@@ -35,6 +35,7 @@ const LoginPage = () => {
           email: email.trim(),
           password,
           options: {
+            emailRedirectTo: `${window.location.origin}/confirm-email`,
             data: {
               name: trimmedName,
             },
@@ -48,17 +49,21 @@ const LoginPage = () => {
       }
 
       const { data, error } = result;
-      const accountAlreadyExists =
-        isSignUp && (error?.code === "user_already_exists" ||
-        (!error && data.user && data.user.identities?.length === 0));
-
-      if (accountAlreadyExists) {
-        setInfoMessage("If you already have an account, try logging in or contact your administrator if access is inactive.");
+      if (isSignUp && ["user_already_exists", "email_exists", "user_banned"].includes(error?.code)) {
+        setInfoMessage("Check your email for next steps.");
         setPassword("");
         return;
       }
 
       if (error) {
+        if (isSignUp) {
+          setErrorMessage(
+            error.code === "weak_password"
+              ? "Please choose a stronger password."
+              : "Could not complete signup. Please try again or contact your administrator.",
+          );
+          return;
+        }
         const isBannedAccount =
           error.code === "user_banned" ||
           error.message?.toLowerCase().includes("banned");
@@ -75,8 +80,13 @@ const LoginPage = () => {
         return;
       }
 
-      if (isSignUp && !data.session) {
-        setInfoMessage("If your signup was successful, your account is awaiting administrator approval. If email confirmation is required, check your email before logging in. If you already have an account, log in or contact your administrator.");
+      if (isSignUp) {
+        if (data.session) {
+          setErrorMessage("Email confirmation is not configured. Contact your administrator.");
+          return;
+        }
+        setInfoMessage("Check your email for next steps.");
+        setPassword("");
         return;
       }
 
@@ -88,7 +98,7 @@ const LoginPage = () => {
         { replace: true },
       );
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Could not complete your request. Please try again.");
+      setErrorMessage(isSignUp ? "Could not complete signup. Please try again or contact your administrator." : error instanceof Error ? error.message : "Could not complete your request. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

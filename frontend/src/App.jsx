@@ -6,6 +6,7 @@ import LandingPage from "./pages/LandingPage";
 
 // The landing page loads right away; every other page loads only when it's opened
 const LoginPage = lazy(() => import("./pages/LoginPage"));
+const ConfirmEmailPage = lazy(() => import("./pages/ConfirmEmailPage"));
 const TermsOfServicePage = lazy(() => import("./pages/TermsOfServicePage"));
 const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
@@ -39,6 +40,7 @@ function App() {
           {/* Public pages: no sidebar */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/confirm-email" element={<ConfirmEmailPage />} />
           <Route path="/terms-of-service" element={<TermsOfServicePage />} />
           <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
 

@@ -65,6 +65,20 @@ end;
 $$;
 
 reset role;
+do $$
+begin
+	begin
+		update public."user" set status = 'active'
+		where id = 'c57f7550-b088-43f9-a300-901d36cc3c9b';
+		raise exception 'An unverified user was activated.';
+	exception when check_violation then
+		null;
+	end;
+end;
+$$;
+
+update auth.users set email_confirmed_at = pg_catalog.now()
+where id = 'c57f7550-b088-43f9-a300-901d36cc3c9b';
 update public."user" set status = 'active'
 where id = 'c57f7550-b088-43f9-a300-901d36cc3c9b';
 set local role authenticated;
