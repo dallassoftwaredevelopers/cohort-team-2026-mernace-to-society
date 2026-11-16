@@ -1,0 +1,3 @@
+ALTER TABLE public.bill 
+ADD COLUMN IF NOT EXISTS bill_url TEXT,
+ADD COLUMN IF NOT EXISTS extracted_url TEXT;

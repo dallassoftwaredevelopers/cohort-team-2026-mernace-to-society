@@ -177,8 +177,25 @@ function BillDetailsPage() {
               ))}
             </div>
 
+            {bill.bill_url && (
+              <div className="mt-6 border-t border-secondary pt-4">
+                <p className="text-sm text-gray-500">Bill URL</p>
+                <p className="mt-1">
+                  <a
+                    href={bill.bill_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-semibold text-blue-600 hover:underline break-all"
+                  >
+                    {bill.bill_url}
+                  </a>
+                </p>
+              </div>
+            )}
+
             {/* The finish panel shows the reason itself */}
             {bill.review_reason && !isUnfinished && (
+
               <div className="mt-6 border-t border-secondary pt-4">
                 <p className="text-sm text-gray-500">
                   Review Comments / Reason

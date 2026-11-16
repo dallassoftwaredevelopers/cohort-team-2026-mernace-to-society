@@ -69,10 +69,32 @@ Database changes are maintained in `supabase/migrations/`. Local seed data is in
 ## Authentication Flow
 
 1. A user signs in or registers through the frontend using Supabase Auth.
+   Signup creates a matching inactive staff profile linked to the application's
+   one organization. An administrator must activate it in Account Settings
+   before the user can access application data.
 2. The Supabase client maintains the user session and attaches the session token to authenticated requests.
 3. Edge Functions that require a user validate the request and perform operations using the caller's Supabase context.
 4. PostgreSQL Row Level Security policies control which records the authenticated user can read or update.
 5. Bill approval decisions are restricted to users with an authorized role by the database approval function.
+
+The application has one organization; administrators can update its details in
+Account Settings. Signup fails if the database does not contain exactly one
+organization. Before applying the signup migration, review existing Auth
+insert triggers, public tables, views, and security-definer functions in the
+target database; the migration stops if it finds unreviewed paths that could
+conflict or bypass inactive-account restrictions. It protects existing public
+tables and the `invoices` bucket; new tables, views, functions, and buckets must
+also enforce active status. Existing Auth accounts without a matching app
+profile are not backfilled automatically.
+
+Local configuration disables email confirmation. Check the deployed Supabase
+Auth settings separately: without email verification, administrators should
+confirm a person's identity before activating their account. The frontend shows
+the confirmation step if the deployed project requires it.
+
+After applying migrations to an isolated local test database, the transactional
+signup test can be run with
+`psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/signup_pending_approval.sql`.
 
 ## Key Features
 
