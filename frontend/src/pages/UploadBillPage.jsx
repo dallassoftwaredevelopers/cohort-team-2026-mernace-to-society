@@ -3,15 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "../../utils/supabase";
 import FinishBillPanel from "../components/FinishBillPanel";
 import UploadDocument from "../components/UploadDocument";
-
-function formatMoney(amount) {
-  return amount == null
-    ? "—"
-    : Number(amount).toLocaleString("en-US", {
-        style: "currency",
-        currency: "USD",
-      });
-}
+import { formatCurrency, formatDate } from "../utils/format";
 
 function UploadBillPage() {
   // The bill process-bill saved: pending, needs_review or extraction_failed
@@ -68,15 +60,15 @@ function UploadBillPage() {
     <>
       <section className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-serif text-2xl font-bold">Upload a bill</h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <h1 className="page-title">Upload a bill</h1>
+          <p className="page-subtitle">
             We'll read the bill, match it to a vendor account and send it for
             approval. If anything is missing, you can fix it here or later from
             the bill's page.
           </p>
         </div>
-        <Link to="/bills" className="btn-secondary px-4 py-2 text-sm">
-          &larr; Return to Bills
+        <Link to="/bills" className="link text-sm">
+          &larr; Back to Bills
         </Link>
       </section>
 
@@ -110,26 +102,18 @@ function UploadBillPage() {
           )}
 
           {processError && (
-            <p role="alert" className="mt-4 text-sm text-red-700">
+            <p role="alert" className="alert-error mt-4">
               {processError}
             </p>
           )}
 
           {duplicate && (
-            <div
-              role="alert"
-              className="mt-4 rounded-lg border border-red-300 p-4"
-            >
-              <p className="text-sm font-semibold text-red-700">
-                {duplicate.message}
-              </p>
+            <div role="alert" className="alert-error mt-4">
+              <p className="font-semibold">{duplicate.message}</p>
               <p className="mt-1 text-sm text-gray-600">
                 Nothing new was saved.{" "}
                 {duplicate.billId && (
-                  <Link
-                    to={`/bills/${duplicate.billId}`}
-                    className="font-semibold underline"
-                  >
+                  <Link to={`/bills/${duplicate.billId}`} className="link">
                     View the existing bill
                   </Link>
                 )}
@@ -138,27 +122,19 @@ function UploadBillPage() {
           )}
 
           {bill?.status === "pending" && (
-            <div
-              role="status"
-              className="mt-4 rounded-lg border border-green-600 p-4"
-            >
-              <p className="text-sm font-semibold text-green-800">
-                Sent for approval
-              </p>
+            <div role="status" className="alert-success mt-4">
+              <p className="font-semibold">Sent for approval</p>
               <p className="mt-1 text-sm text-gray-700">
                 {[
                   extracted?.vendor_name,
                   bill.invoice_number && `Invoice ${bill.invoice_number}`,
-                  formatMoney(bill.amount),
-                  bill.due_date && `due ${bill.due_date}`,
+                  formatCurrency(bill.amount),
+                  bill.due_date && `due ${formatDate(bill.due_date)}`,
                 ]
                   .filter(Boolean)
                   .join(" · ")}
               </p>
-              <Link
-                to={`/bills/${bill.id}`}
-                className="mt-3 inline-block text-sm font-semibold underline"
-              >
+              <Link to={`/bills/${bill.id}`} className="link mt-3 inline-block">
                 View bill
               </Link>
             </div>
@@ -176,10 +152,7 @@ function UploadBillPage() {
               />
               <p className="mt-4 text-sm text-gray-600">
                 Need to stop? It's saved.{" "}
-                <Link
-                  to={`/bills/${bill.id}`}
-                  className="font-semibold underline"
-                >
+                <Link to={`/bills/${bill.id}`} className="link">
                   Finish it later from the bill's page
                 </Link>
                 .
