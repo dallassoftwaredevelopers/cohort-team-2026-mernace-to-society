@@ -1,7 +1,7 @@
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Footer from "./Footer";
-import { UserProfileProvider } from "../hooks/useUserProfile";
+import UserProfileProvider from "./UserProfileProvider";
 
 // Shared shell for every logged-in page: sidebar + page content + footer.
 // Pages render inside <Outlet /> and only return their own content.
