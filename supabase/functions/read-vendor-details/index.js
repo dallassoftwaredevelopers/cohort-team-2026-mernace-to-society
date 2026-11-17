@@ -47,7 +47,8 @@ export default {
 					payment_type,
 					status,
 					property_id,
-					vendor_id
+					vendor_id,
+					property(name)
 				)
 			`)
 			.eq("id", vendorId)

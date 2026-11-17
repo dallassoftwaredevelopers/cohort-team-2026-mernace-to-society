@@ -26,7 +26,13 @@ const columns = [
 
 const hideOnMobile = (col) => (col.mobile ? "" : "hidden md:table-cell");
 
-function renderVendorCell(col, vendor, accountCount) {
+function renderVendorCell(
+  col,
+  vendor,
+  accountCount,
+  openBillCounts,
+  openBillCountError,
+) {
   if (col.key === "name") {
     return (
       <Link to={`/vendors/${vendor.id}`} className="link">
@@ -42,6 +48,11 @@ function renderVendorCell(col, vendor, accountCount) {
   }
 
   if (col.key === "accounts") return accountCount;
+
+  if (col.key === "open_bills") {
+    if (openBillCountError) return "—";
+    return openBillCounts ? (openBillCounts[vendor.id] ?? 0) : "…";
+  }
 
   if (col.key === "status") {
     return (
@@ -66,6 +77,7 @@ function VendorsPage() {
   const canEditRecords = canManageRecords(profile?.role);
 
   const [openBillCount, setOpenBillCount] = useState(null);
+  const [openBillCounts, setOpenBillCounts] = useState(null);
   const [isLoadingOpenBillCount, setIsLoadingOpenBillCount] = useState(true);
   const [openBillCountError, setOpenBillCountError] = useState("");
   const [showVendorForm, setShowVendorForm] = useState(false);
@@ -114,45 +126,83 @@ function VendorsPage() {
 
   useEffect(() => {
     let isMounted = true;
+    let requestId = 0;
 
-    async function loadOpenBillCount() {
+    async function loadOpenBillCounts() {
+      const currentRequestId = ++requestId;
+      setIsLoadingOpenBillCount(true);
+      setOpenBillCountError("");
+
       try {
-        const { count, error: queryError } = await supabase
-          .from("bill")
-          .select("id, vendor_account!inner(vendor_id)", {
-            count: "exact",
-            head: true,
-          })
-          .in("status", ["pending", "needs_review", "approved"]);
+        const countsByVendor = {};
+        let totalCount = 0;
+        const pageSize = 1000;
 
-        if (queryError) throw queryError;
-        if (count === null) {
-          throw new Error("Supabase did not return the open bill count.");
+        for (let from = 0; ; from += pageSize) {
+          const { data, error: queryError } = await supabase
+            .from("bill")
+            .select("vendor_account(vendor_id)")
+            .in("status", ["pending", "needs_review", "approved"])
+            .order("id")
+            .range(from, from + pageSize - 1);
+
+          if (queryError) throw queryError;
+
+          const bills = data ?? [];
+          totalCount += bills.length;
+          for (const bill of bills) {
+            const vendorId = bill.vendor_account?.vendor_id;
+            if (vendorId) {
+              countsByVendor[vendorId] = (countsByVendor[vendorId] ?? 0) + 1;
+            }
+          }
+
+          if (bills.length < pageSize) break;
         }
 
-        if (isMounted) {
-          setOpenBillCount(count);
-          setOpenBillCountError("");
-        }
+        if (!isMounted || currentRequestId !== requestId) return;
+        setOpenBillCount(totalCount);
+        setOpenBillCounts(countsByVendor);
       } catch (caughtError) {
-        if (isMounted) {
-          setOpenBillCountError(
-            caughtError instanceof Error
-              ? caughtError.message
-              : "Could not load open bills.",
-          );
-        }
+        if (!isMounted || currentRequestId !== requestId) return;
+        setOpenBillCountError(
+          caughtError instanceof Error
+            ? caughtError.message
+            : "Could not load open bills.",
+        );
       } finally {
-        if (isMounted) {
+        if (isMounted && currentRequestId === requestId) {
           setIsLoadingOpenBillCount(false);
         }
       }
     }
 
-    loadOpenBillCount();
+    const channel = supabase
+      .channel("vendors-open-bill-counts")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bill" },
+        loadOpenBillCounts,
+      )
+      .subscribe((status, error) => {
+        if (isMounted && status === "SUBSCRIBED") {
+          void loadOpenBillCounts();
+        } else if (
+          isMounted &&
+          (status === "CHANNEL_ERROR" || status === "TIMED_OUT")
+        ) {
+          setOpenBillCountError(
+            error?.message ?? "Could not subscribe to bill updates.",
+          );
+        }
+      });
+
+    loadOpenBillCounts();
 
     return () => {
       isMounted = false;
+      requestId += 1;
+      void supabase.removeChannel(channel);
     };
   }, []);
 
@@ -407,7 +457,13 @@ function VendorsPage() {
 
         {columns.map((col) => (
           <td key={col.key} className={`px-4 py-3 ${hideOnMobile(col)}`}>
-            {renderVendorCell(col, vendor, accountCount)}
+            {renderVendorCell(
+              col,
+              vendor,
+              accountCount,
+              openBillCounts,
+              openBillCountError,
+            )}
           </td>
         ))}
 
