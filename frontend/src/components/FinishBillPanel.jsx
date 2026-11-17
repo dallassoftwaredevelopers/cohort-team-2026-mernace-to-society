@@ -348,7 +348,11 @@ function FinishBillPanel({
           initialValues={{
             name: extracted?.vendor_name,
             account_number: extracted?.account_number,
-            portal_url: extracted?.portal_url,
+            // The model sometimes puts the URL in extracted_url or bill_url instead
+            portal_url:
+              extracted?.portal_url ??
+              extracted?.extracted_url ??
+              extracted?.bill_url,
             property_id: knownProperty?.id,
           }}
           isSubmitting={isSaving}

@@ -148,14 +148,18 @@ export default {
 
 // extracted_amount is left out: the column is int2 and can't hold cents
 function extractedColumns(extracted, fields) {
-	const portalUrl = webUrl(extracted?.portal_url);
+	// The model sometimes puts the bill's URL in extracted_url or bill_url instead of portal_url
+	const url =
+		webUrl(extracted?.portal_url) ??
+		webUrl(extracted?.extracted_url) ??
+		webUrl(extracted?.bill_url);
 	return {
 		extracted_vendor_name: text(extracted?.vendor_name),
 		extracted_account_number: text(extracted?.account_number),
 		extracted_invoice_number: fields.invoice_number,
 		extracted_due_date: fields.due_date,
-		bill_url: portalUrl,
-		extracted_url: portalUrl,
+		bill_url: url,
+		extracted_url: url,
 	};
 }
 
