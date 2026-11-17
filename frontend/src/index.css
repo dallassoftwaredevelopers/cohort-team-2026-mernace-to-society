@@ -31,8 +31,8 @@
     min-height: 100vh;
   }
 
-  button:not(:disabled),
-  [role="button"]:not(:disabled) {
+  button:not(:disabled), 
+  [role="button"]:not(:disabled):not([aria-disabled="true"]) {
     cursor: pointer;
   }
 }

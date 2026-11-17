@@ -9,6 +9,7 @@ import {
   getInitials,
   useUserProfile,
 } from "../hooks/useUserProfile";
+import { MIN_PASSWORD_LENGTH, PASSWORD_RULES_ERROR, passwordMeetsRules } from "../../utils/passwordRules";
 
 const tabs = ["Profile", "Organization", "Payment Methods", "Team & Roles"];
 
@@ -33,6 +34,8 @@ const passwordFields = [
     id: "new_password",
     autoComplete: "new-password",
     placeholder: "Enter a new password",
+    minLength: MIN_PASSWORD_LENGTH,
+    showHint: true,
   },
   {
     label: "Confirm New Password",
@@ -131,7 +134,8 @@ function AccountSettingsPage() {
   });
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [name, setName] = useState(null);
   const [profileErrorMessage, setProfileErrorMessage] = useState("");
   const [profileSuccessMessage, setProfileSuccessMessage] = useState("");
@@ -281,7 +285,7 @@ function AccountSettingsPage() {
       return;
     }
 
-    setIsUpdating(true);
+    setIsSavingProfile(true);
     try {
       // The provider updates shared state too, so the sidebar reflects the saved name immediately.
       await updateProfileName(trimmedName);
@@ -294,7 +298,7 @@ function AccountSettingsPage() {
           : "Could not update your profile.",
       );
     } finally {
-      setIsUpdating(false);
+      setIsSavingProfile(false);
     }
   }
 
@@ -424,52 +428,63 @@ function AccountSettingsPage() {
     e.preventDefault();
     setPasswordError("");
     setPasswordSuccess("");
-    setIsUpdating(true);
 
-    // Re-authenticate with the current password before accepting a new one.
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password: passwords.current_password,
-    });
-
-    if (signInError) {
-      setPasswordError(
-        "Current password entry is incorrect. Please try again.",
-      );
-      setIsUpdating(false);
+    if(!passwordMeetsRules(passwords.new_password)){
+      setPasswordError(PASSWORD_RULES_ERROR);
       return;
     }
 
-    // Don't update Auth credentials unless both new-password fields agree.
     if (passwords.new_password !== passwords.confirm_new_password) {
       setPasswordError(
-        "New password and Confirm new password fields do not match. Please try again.",
+        "New password and Confirm new password fields do not match. Please try again."
       );
-      setIsUpdating(false);
       return;
     }
 
-    const { error: updateError } = await supabase.auth.updateUser({
-      password: passwords.new_password,
-      current_password: passwords.current_password,
-    });
+    setIsUpdatingPassword(true);
+    try {
+      
+      // Re-authenticate with the current password before accepting a new one.
+      const {
+      data: { user },
+      } = await supabase.auth.getUser();
 
-    if (updateError) {
-      setPasswordError(updateError.message);
-    } else {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: passwords.current_password,
+      });
+
+      if (signInError) {
+        setPasswordError(
+          "Current password entry is incorrect. Please try again."
+        )
+        return;
+      }
+
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: passwords.new_password,
+        current_password: passwords.current_password,
+      });
+
+      if (updateError) {
+        setPasswordError(updateError.message);
+        return;
+      } 
+      
       setPasswordSuccess("Your password has been updated.");
       setPasswords({
         current_password: "",
         new_password: "",
         confirm_new_password: "",
       });
-    }
 
-    setIsUpdating(false);
+    } catch (error) {
+      setPasswordError(
+        error instanceof Error ? error.message : "Could not update your password.",
+      );
+    } finally {
+        setIsUpdatingPassword(false);
+    }  
   }
 
   return (
@@ -516,7 +531,8 @@ function AccountSettingsPage() {
           setProfileErrorMessage={setProfileErrorMessage}
           setProfileSuccessMessage={setProfileSuccessMessage}
           isProfileLoading={isProfileLoading}
-          isUpdating={isUpdating}
+          isSavingProfile={isSavingProfile}
+          isUpdatingPassword={isUpdatingPassword}
           showPasswordForm={showPasswordForm}
           setShowPasswordForm={setShowPasswordForm}
           handleUpdatePassword={handleUpdatePassword}

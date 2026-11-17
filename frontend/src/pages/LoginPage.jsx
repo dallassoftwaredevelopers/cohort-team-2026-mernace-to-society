@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { supabase } from "../../utils/supabase";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import mainSplash from "../assets/billioMain.png";
+import PasswordHint from "../components/PasswordHint";
+import { passwordMeetsRules } from "../../utils/passwordRules";
 
 const LoginPage = () => {
   const [name, setName] = useState("");
@@ -199,6 +201,7 @@ const LoginPage = () => {
                 className={inputClassName}
               />
               
+              {isSignUp && <PasswordHint password={password} />}
               
               {errorMessage && (
                 <p role="alert" className="rounded-md font-sans bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -215,18 +218,36 @@ const LoginPage = () => {
               <button 
                 type="submit"
                 disabled={isSubmitting}
-                className="cursor-pointer btn-primary font-sans w-full py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn-primary font-sans w-full py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
               >
                   {logInSignUpSubmitButtonLabel}
               </button>
+
             </form>
-            <button
-              type="button"
-              onClick={handleToggleMode}
-              className="mt-2 cursor-pointer text-sm font-semibold text-primary hover:underline "
-            >
-              {isSignUp ? "Already have an account? Log in" : "Don't have an account? Sign up"}
-            </button>
+
+            <p className="mt-2 text-sm text-gray-600">
+              {isSignUp ? "Already have an account? " : "Don't have an account? "}
+
+              <button
+                type="button"
+                onClick={handleToggleMode}
+                className="font-semibold text-primary hover:underline"
+              >
+                {isSignUp ? "Log in" : "Sign up"}
+              </button>
+
+            </p>
+            
+            {!isSignUp && (
+              <Link
+                to="/forgot-password"
+                state={{ email, from: "/login" }}
+                className="block mt-2 text-sm font-semibold text-primary hover:underline"
+              >
+                Forgot password?
+              </Link>
+            )}
+
           </div>
         </div>
       </main>
