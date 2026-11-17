@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { Upload } from 'lucide-react';
 import { supabase } from '../../utils/supabase';
 
 const extensionsByType = {
@@ -117,10 +118,10 @@ function UploadDocument({ onUploaded, onRemoved, disabled = false }) {
 					if (!busy) handleFileSelection(event.dataTransfer.files[0]);
 				}}
 			>
+				<Upload aria-hidden="true" className="mb-3 h-8 w-8 text-gray-500" />
 				<p>
 					{isDragging ? 'Drop your file here!' : 'Upload your bill or invoice'}
 				</p>
-				<p className="mt-1 text-sm text-gray-500">PDF, JPG, or PNG</p>
 				<button
 					type="button"
 					disabled={busy}

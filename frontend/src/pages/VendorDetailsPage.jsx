@@ -187,7 +187,7 @@ function VendorDetailsPage() {
                     <th className="px-4 py-3 font-semibold">Service</th>
                     <th className="px-4 py-3 font-semibold">Payment Type</th>
                     <th className="px-4 py-3 font-semibold">Status</th>
-                    <th className="px-4 py-3 font-semibold">Property ID</th>
+                    <th className="px-4 py-3 font-semibold">Property</th>
                   </tr>
                 </thead>
                 <tbody className="block md:table-row-group">
@@ -222,12 +222,8 @@ function VendorDetailsPage() {
                         </span>
                       </td>
                       <td className={stackedCellClassName}>
-                        <span className="font-semibold md:hidden">
-                          Property ID
-                        </span>
-                        <span className="break-all text-right md:text-left">
-                          {account.property_id || "—"}
-                        </span>
+                        <span className="font-semibold md:hidden">Property</span>
+                        {account.property?.name || "—"}
                       </td>
                     </tr>
                   ))}
