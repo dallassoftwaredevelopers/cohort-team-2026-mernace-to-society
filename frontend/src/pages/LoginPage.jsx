@@ -3,12 +3,20 @@ import { supabase } from "../../utils/supabase";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import mainSplash from "../assets/billioMain.png";
 import PasswordHint from "../components/PasswordHint";
-import { passwordMeetsRules } from "../../utils/passwordRules";
+import { PASSWORD_RULES_ERROR, passwordMeetsRules } from "../../utils/passwordRules";
+
+const LOGIN_ERROR_MESSAGES = {
+  invalid_credentials: "Incorrect email or password.",
+  email_not_confirmed: "Please verify your email before logging in. Check your email for the link.",
+  user_banned: "Your account access is inactive. Contact your organization's administrator for access.",
+  over_request_rate_limit: "Too many attempts. Please wait a few minutes and try again.",
+};
 
 const LoginPage = () => {
   const [name, setName] = useState("");
   const [email, setEmail] =useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [infoMessage, setInfoMessage] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
@@ -33,6 +41,16 @@ const LoginPage = () => {
           return;
         }
 
+        if (!passwordMeetsRules(password)) {
+          setErrorMessage(PASSWORD_RULES_ERROR);
+          return;
+        }
+
+        if (password !== confirmPassword) {
+          setErrorMessage("Passwords do not match.");
+          return;
+        }
+
         result = await supabase.auth.signUp({
           email: email.trim(),
           password,
@@ -54,6 +72,7 @@ const LoginPage = () => {
       if (isSignUp && ["user_already_exists", "email_exists", "user_banned"].includes(error?.code)) {
         setInfoMessage("Check your email for next steps.");
         setPassword("");
+        setConfirmPassword("");
         return;
       }
 
@@ -61,18 +80,14 @@ const LoginPage = () => {
         if (isSignUp) {
           setErrorMessage(
             error.code === "weak_password"
-              ? "Please choose a stronger password."
+              ? PASSWORD_RULES_ERROR
               : "Could not complete signup. Please try again or contact your administrator.",
           );
           return;
         }
-        const isBannedAccount =
-          error.code === "user_banned" ||
-          error.message?.toLowerCase().includes("banned");
+
         setErrorMessage(
-          isBannedAccount
-            ? "Your account access is inactive. Contact your organization administrator for access."
-            : error.message,
+          LOGIN_ERROR_MESSAGES[error.code] ?? "Could not log in. Please try again."
         );
         return;
       }
@@ -89,6 +104,7 @@ const LoginPage = () => {
         }
         setInfoMessage("Check your email for next steps.");
         setPassword("");
+        setConfirmPassword("");
         return;
       }
 
@@ -100,7 +116,11 @@ const LoginPage = () => {
         { replace: true },
       );
     } catch (error) {
-      setErrorMessage(isSignUp ? "Could not complete signup. Please try again or contact your administrator." : error instanceof Error ? error.message : "Could not complete your request. Please try again.");
+      console.error(error);
+      setErrorMessage(
+        isSignUp
+          ? "Could not complete signup. Please try again or contact your administrator."
+          : "Could not log in. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -109,6 +129,7 @@ const LoginPage = () => {
   function handleToggleMode() {
     setIsSignUp(!isSignUp);
     setPassword("");
+    setConfirmPassword("");
     setErrorMessage("");
     setInfoMessage("");
   }
@@ -200,6 +221,28 @@ const LoginPage = () => {
                 onChange={(event) => setPassword(event.target.value)}
                 className={inputClassName}
               />
+
+              {isSignUp && (
+                <div>
+                  <label 
+                    htmlFor="confirm-password"
+                    className="mb-1 block text-sm font-medium text-gray-700"
+                  >
+                      Confirm password
+                  </label>
+                  <input
+                    id="confirm-password"
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                    placeholder="Re-enter your password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className={inputClassName}
+                  />
+
+                </div>
+              )}
               
               {isSignUp && <PasswordHint password={password} />}
               
