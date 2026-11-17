@@ -70,8 +70,8 @@ Database changes are maintained in `supabase/migrations/`. Local seed data is in
 
 1. A user signs in or registers through the frontend using Supabase Auth.
    Signup creates a matching inactive staff profile linked to the application's
-   one organization. An administrator must activate it in Account Settings
-   before the user can access application data.
+   one organization. The user must verify their email before an administrator
+   can activate the account in Account Settings.
 2. The Supabase client maintains the user session and attaches the session token to authenticated requests.
 3. Edge Functions that require a user validate the request and perform operations using the caller's Supabase context.
 4. PostgreSQL Row Level Security policies control which records the authenticated user can read or update.
@@ -87,10 +87,27 @@ tables and the `invoices` bucket; new tables, views, functions, and buckets must
 also enforce active status. Existing Auth accounts without a matching app
 profile are not backfilled automatically.
 
-Local configuration disables email confirmation. Check the deployed Supabase
-Auth settings separately: without email verification, administrators should
-confirm a person's identity before activating their account. The frontend shows
-the confirmation step if the deployed project requires it.
+Local Supabase configuration enables email confirmation and uses
+`supabase/templates/confirmation.html`. Signup sends a generic message for new
+and existing accounts. The confirmation link opens `/confirm-email`, where the
+user must click Confirm email before the app verifies the link. The extra click
+prevents email link scanners from consuming the confirmation token.
+
+The deployed project's Auth settings must be configured separately: enable email
+confirmation, configure production SMTP, add each frontend's exact
+`/confirm-email` URL to the redirect allowlist, and set the confirmation email
+template to match `supabase/templates/confirmation.html`. Set the site URL to
+the production frontend. Local email can be checked using Supabase's local
+email testing interface. New accounts still need administrator activation
+after verification. Deploy the verified-email activation migration and updated
+`team-members` Edge Function as well as the frontend; existing inactive users
+must verify their email before they can be activated.
+
+Supabase's Auth response for existing accounts depends on project settings and
+may reveal account details to direct API callers; the generic frontend message
+alone does not guarantee protection from account enumeration. Verify the
+deployed Auth responses and consider additional server-side protections if this
+is a requirement.
 
 After applying migrations to an isolated local test database, the transactional
 signup test can be run with
