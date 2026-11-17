@@ -48,7 +48,7 @@ export default {
 			);
 		}
 
-		const [account] = matches;
+		const { account } = match;
 		const complete = validateBill({
 			...extracted,
 			vendor_account_id: account.id,
