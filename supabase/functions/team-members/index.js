@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { withSupabase } from "jsr:@supabase/server@^1";
 import { validateTeamMemberUpdate } from "./validateTeamMemberUpdate.js";
+import { verifyMemberEmail } from "./verifyMemberEmail.js";
 
 export default {
 	fetch: withSupabase({ auth: "user" }, async (req, { supabase }) => {
@@ -127,6 +128,23 @@ export default {
 					{ error: "That member does not belong to your organization." },
 					{ status: 404 },
 				);
+			}
+
+			if (body.status === "active" && targetUser.status !== "active") {
+				try {
+					const verified = await verifyMemberEmail(adminClient, targetUser.id);
+					if (!verified) {
+						return Response.json(
+							{ error: "The member must verify their email before activation." },
+							{ status: 400 },
+						);
+					}
+				} catch (error) {
+					return Response.json(
+						{ error: error instanceof Error ? error.message : "Could not check the member's email verification." },
+						{ status: 500 },
+					);
+				}
 			}
 
 			const updates = {};
