@@ -3,7 +3,6 @@ import { supabase } from "../../utils/supabase";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import mainSplash from "../assets/billioMain.png";
 import PasswordHint from "../components/PasswordHint";
-import { passwordMeetsRules } from "../../utils/passwordRules";
 
 const LoginPage = () => {
   const [name, setName] = useState("");
