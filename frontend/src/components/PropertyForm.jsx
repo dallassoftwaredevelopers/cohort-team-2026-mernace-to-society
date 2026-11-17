@@ -35,7 +35,7 @@ function PropertyForm({
     event.preventDefault();
     await onSubmit({
       ...formData,
-      zip: formData.zip === "" ? null : Number(formData.zip),
+      zip: formData.zip.trim() === "" ? null : formData.zip.trim(),
     });
   }
 

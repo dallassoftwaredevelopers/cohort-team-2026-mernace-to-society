@@ -4,8 +4,8 @@
 
 insert into property (id, created_at, name, street, city, state, zip, status)
 values
-  ('11111111-1111-4111-8111-111111111111', now(), 'Royal Oaks Apartments', '100 Oak Ln', 'Tampa', 'FL', 33602, 'active'),
-  ('22222222-2222-4222-8222-222222222222', now(), 'Bayview Townhomes', '250 Shore Dr', 'St. Petersburg', 'FL', 33701, 'active')
+  ('11111111-1111-4111-8111-111111111111', now(), 'Royal Oaks Apartments', '100 Oak Ln', 'Tampa', 'FL', '33602', 'active'),
+  ('22222222-2222-4222-8222-222222222222', now(), 'Bayview Townhomes', '250 Shore Dr', 'St. Petersburg', 'FL', '33701', 'active')
 on conflict do nothing;
 
 -- email/phone are made-up test values
