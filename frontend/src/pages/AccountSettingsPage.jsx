@@ -9,7 +9,7 @@ import {
   getInitials,
   useUserProfile,
 } from "../hooks/useUserProfile";
-import { MIN_PASSWORD_LENGTH, PASSWORD_RULES_ERROR, passwordMeetsRules } from "../../utils/passwordRules";
+import { PASSWORD_RULES_ERROR, passwordMeetsRules } from "../../utils/passwordRules";
 
 const tabs = ["Profile", "Organization", "Payment Methods", "Team & Roles"];
 
@@ -34,8 +34,6 @@ const passwordFields = [
     id: "new_password",
     autoComplete: "new-password",
     placeholder: "Enter a new password",
-    minLength: MIN_PASSWORD_LENGTH,
-    showHint: true,
   },
   {
     label: "Confirm New Password",
