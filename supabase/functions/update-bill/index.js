@@ -4,6 +4,8 @@ import { validateBill } from '../_shared/validateBill.js';
 const UUID_RE =
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const UNIQUE_VIOLATION = '23505';
+
 export default {
 	fetch: withSupabase({ auth: 'user' }, async (req, { supabase }) => {
 		if (req.method !== 'PATCH') {
@@ -60,6 +62,14 @@ export default {
 			.select()
 			.maybeSingle();
 
+		if (error?.code === UNIQUE_VIOLATION) {
+			return Response.json(
+				{
+					error: `Invoice ${result.value.invoice_number} was already entered for this account.`,
+				},
+				{ status: 409 },
+			);
+		}
 		if (error) {
 			return Response.json({ error: error.message }, { status: 500 });
 		}

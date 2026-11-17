@@ -4,14 +4,6 @@ import { extractBillData, MIME_BY_EXTENSION } from '../_shared/openrouter.js';
 import { findVendorId, matchAccount, normalize } from '../_shared/matching.js';
 import { routeBill } from '../_shared/routeBill.js';
 
-// DC-84: turns an uploaded file into a saved bill with no form to fill in.
-//   1. Same file uploaded before?   → 409, no model call
-//   2. AI reads it                  → fails: saved as extraction_failed
-//   3. Match the vendor account and run the same checks as a typed-in bill
-//   4. Same invoice for that account already entered? → 409, nothing saved
-//   5. Save once, as pending (clean) or needs_review (with the reason)
-// Either way the bill still goes through manager approval (decide_bill).
-//
 // The AI only reads the bill. Whether it's complete enough for approval is
 // decided by routeBill here, and enforced again by the bill table's CHECK.
 
@@ -147,11 +139,36 @@ export default {
 				status: route.status,
 				review_reason: route.review_reason,
 				extracted_data: extracted,
+				...extractedColumns(extracted, route.fields),
 			},
 			{ vendor_id: vendorId },
 		);
 	}),
 };
+
+// extracted_amount is left out: the column is int2 and can't hold cents
+function extractedColumns(extracted, fields) {
+	const portalUrl = webUrl(extracted?.portal_url);
+	return {
+		extracted_vendor_name: text(extracted?.vendor_name),
+		extracted_account_number: text(extracted?.account_number),
+		extracted_invoice_number: fields.invoice_number,
+		extracted_due_date: fields.due_date,
+		bill_url: portalUrl,
+		extracted_url: portalUrl,
+	};
+}
+
+function text(value) {
+	return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+// Bills often print "www.example.com/pay" with no scheme
+function webUrl(value) {
+	const url = text(value);
+	if (!url) return null;
+	return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+}
 
 async function saveBill(supabase, row, extra = {}) {
 	const { data, error } = await supabase

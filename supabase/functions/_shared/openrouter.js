@@ -66,7 +66,6 @@ const BILL_SCHEMA = {
 			required: ['street', 'city', 'state', 'zip'],
 			additionalProperties: false,
 		},
-		// Pre-fills the vendor's portal_url when adding a new vendor
 		portal_url: {
 			type: ['string', 'null'],
 			description: 'The website printed on the bill for paying it online',

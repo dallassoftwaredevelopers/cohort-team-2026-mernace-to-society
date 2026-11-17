@@ -1,6 +1,8 @@
 import { withSupabase } from 'jsr:@supabase/server@^1';
 import { validateBill } from '../_shared/validateBill.js';
 
+const UNIQUE_VIOLATION = '23505';
+
 export default {
 	fetch: withSupabase({ auth: 'user' }, async (req, { supabase }) => {
 		if (req.method !== 'POST') {
@@ -58,6 +60,14 @@ export default {
 			.select()
 			.single();
 
+		if (error?.code === UNIQUE_VIOLATION) {
+			return Response.json(
+				{
+					error: `Invoice ${result.value.invoice_number} was already entered for this account.`,
+				},
+				{ status: 409 },
+			);
+		}
 		if (error) {
 			return Response.json({ error: error.message }, { status: 500 });
 		}

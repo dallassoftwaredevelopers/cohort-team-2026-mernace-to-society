@@ -2,7 +2,7 @@ import { withSupabase } from 'jsr:@supabase/server@^1';
 import { extractBillData, MIME_BY_EXTENSION } from '../_shared/openrouter.js';
 
 export default {
-    fetch: withSupabase({ auth: 'user' }, async (req, { supabase, user }) => {
+    fetch: withSupabase({ auth: 'user' }, async (req, { supabase }) => {
         if (req.method !== 'POST') {
             return Response.json({ error: 'Method not allowed' }, { status: 405 });
         }
@@ -51,36 +51,7 @@ export default {
             return Response.json({ error: 'Extraction failed' }, { status: 502 });
         }
 
-        // Save `extracted` data onto a new bill row including the URLs
-        const { data: billRecord, error: insertError } = await supabase
-            .from('bill')
-            .insert({
-                file_path: path,
-                source: 'upload',
-                status: 'pending',
-                created_by: user.id,
-                amount: extracted.amount,
-                issue_date: extracted.issue_date,
-                due_date: extracted.due_date,
-                invoice_number: extracted.invoice_number,
-                extracted_vendor_name: extracted.vendor_name,
-                extracted_account_number: extracted.account_number,
-                extracted_invoice_number: extracted.invoice_number,
-                extracted_amount: extracted.amount,
-                extracted_due_date: extracted.due_date,
-                // Map the extracted and active URLs here:
-                extracted_url: extracted.extracted_url ?? extracted.bill_url,
-                bill_url: extracted.bill_url,
-                extracted_data: extracted,
-            })
-            .select()
-            .single();
-
-        if (insertError) {
-            console.error('Database insert error:', insertError);
-            return Response.json({ error: 'Failed to save bill record' }, { status: 500 });
-        }
-
-        return Response.json({ data: billRecord }, { status: 200 });
+        // Read-only: process-bill is the function that saves uploaded bills
+        return Response.json({ data: extracted }, { status: 200 });
     }),
 };
