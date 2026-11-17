@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../utils/supabase";
 import PasswordHint from "../components/PasswordHint";
-import { MIN_PASSWORD_LENGTH, PASSWORD_RULES_ERROR, passwordMeetsRules } from "../../utils/passwordRules";
+import { PASSWORD_RULES_ERROR, passwordMeetsRules } from "../../utils/passwordRules";
 
 //Keep in sync with TOML key max_frequency in supabase/config.toml
 const RESEND_COOLDOWN_SECONDS = 60;
@@ -232,13 +232,11 @@ function ForgotPasswordPage() {
                                 type="password"
                                 autoComplete="new-password"
                                 required
-                                minLength={MIN_PASSWORD_LENGTH}
+                                placeholder="Create strong password"
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
                                 className={inputClassName}
                             />
-
-                            <PasswordHint password={newPassword} />
                         </div>
 
                         <div>
@@ -254,12 +252,15 @@ function ForgotPasswordPage() {
                                 type="password"
                                 autoComplete="new-password"
                                 required
+                                placeholder="Re-enter your password"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 className={inputClassName}
                             />
 
                         </div>
+
+                        <PasswordHint password={newPassword} />
 
                         <button
                             type="submit"

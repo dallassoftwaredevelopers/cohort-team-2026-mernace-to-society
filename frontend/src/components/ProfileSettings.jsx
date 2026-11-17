@@ -133,7 +133,7 @@ function ProfileSettings({
             <form onSubmit={handleUpdatePassword} className="mt-4">
               <div className="grid grid-cols-1 gap-4 md:w-1/2">
                 {passwordFields.map(
-                  ({ label, id, autoComplete, placeholder, minLength, showHint }) => (
+                  ({ label, id, autoComplete, placeholder }) => (
                     <div key={id}>
                       <label htmlFor={id} className="label">
                         {label}
@@ -143,7 +143,6 @@ function ProfileSettings({
                         type="password"
                         autoComplete={autoComplete}
                         placeholder={placeholder}
-                        minLength={minLength}
                         value={passwords[id]}
                         onChange={(e) =>
                           setPasswords({
@@ -154,7 +153,10 @@ function ProfileSettings({
                         required
                         className={inputClass}
                       />
-                      {showHint && <PasswordHint password={passwords[id]} />}
+
+                      { id === "confirm_new_password" && (
+                        <PasswordHint password={passwords.new_password} />
+                      )}
                     </div>
                   ),
                 )}
