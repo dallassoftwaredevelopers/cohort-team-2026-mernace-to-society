@@ -7,18 +7,19 @@ import { formatCurrency, formatDate, formatDateTime } from "../utils/format";
 const tabs = ["Pending", "Needs Review", "Approved", "Rejected"];
 const cellMessageClassName = "px-4 py-12 text-center text-gray-600";
 
+// Source and Review Reason only fit in the table on very wide screens;
+// they're still on the cards and in the View popup
 const queueColumns = [
-  "Invoice #",
-  "Property",
-  "Vendor",
-  "Amount",
-  "Due Date",
-  "Source",
-  "Review Reason",
-  "Status",
-  "Action",
+  { label: "Invoice #" },
+  { label: "Property" },
+  { label: "Vendor" },
+  { label: "Amount" },
+  { label: "Due Date" },
+  { label: "Source", wideOnly: true },
+  { label: "Review Reason", wideOnly: true },
+  { label: "Status" },
+  { label: "Action" },
 ];
-
 // Approval history is scanned, not acted on: phones show Date + Action only
 const historyColumns = [
   { label: "Date", mobile: true },
@@ -31,14 +32,14 @@ const historyColumns = [
 
 const hideOnMobile = (mobile) => (mobile ? "" : "hidden md:table-cell");
 
-// Queue rows have actions, so below md each row stacks into a labeled card
-const stackedRowClassName =
-  "mb-4 block rounded-lg bg-white p-4 md:mb-0 md:table-row md:rounded-none md:bg-transparent md:p-0 md:border-t md:border-secondary";
-const stackedCellClassName =
-  "flex justify-between gap-4 py-1 md:table-cell md:px-3 md:py-3";
+// Queue rows have actions, so until there's room for the table each row
+// stacks into a labeled card (shared classes in index.css)
+const stackedRowClassName = "stacked-row";
+const stackedCellClassName = "stacked-cell";
+const wideOnlyCellClassName = "stacked-cell wide-only";
 
 function MobileLabel({ children }) {
-  return <span className="font-semibold md:hidden">{children}</span>;
+  return <span className="stacked-label">{children}</span>;
 }
 
 function getVendorName(bill) {
@@ -321,146 +322,144 @@ function ApprovalsPage() {
           </div>
         </div>
 
-        <table className="mt-4 w-full text-left text-sm">
-          <thead className="hidden md:table-header-group">
-            <tr className="text-xs uppercase">
-              {queueColumns.map((column) => (
-                <th key={column} className="px-3 py-3 font-semibold">
-                  {column}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="block md:table-row-group">
-            {isLoading ? (
-              <tr className="block md:table-row">
-                <td
-                  colSpan={9}
-                  className={`block md:table-cell ${cellMessageClassName}`}
-                >
-                  Loading approval queue…
-                </td>
-              </tr>
-            ) : errorMessage ? (
-              <tr className="block md:table-row">
-                <td
-                  colSpan={9}
-                  className={`block md:table-cell ${cellMessageClassName}`}
-                >
-                  Approval queue could not be loaded.
-                </td>
-              </tr>
-            ) : filteredBills.length === 0 ? (
-              <tr className="block md:table-row">
-                <td
-                  colSpan={9}
-                  className={`block md:table-cell ${cellMessageClassName}`}
-                >
-                  No bills in this category.
-                </td>
-              </tr>
-            ) : (
-              filteredBills.map((bill) => (
-                <tr key={bill.id} className={stackedRowClassName}>
-                  <td
-                    className={`${stackedCellClassName} md:whitespace-nowrap`}
+        <div className="table-card mt-4">
+          <table className="stacked-table">
+            <thead>
+              <tr>
+                {queueColumns.map(({ label, wideOnly }) => (
+                  <th
+                    key={label}
+                    className={wideOnly ? "wide-only" : undefined}
                   >
-                    <MobileLabel>Invoice #</MobileLabel>
-                    <Link to={`/bills/${bill.id}`} className="link">
-                      {bill.invoice_number || "—"}
-                    </Link>
-                  </td>
-                  <td className={stackedCellClassName}>
-                    <MobileLabel>Property</MobileLabel>
-                    {bill.property?.name || "—"}
-                  </td>
-                  <td className={stackedCellClassName}>
-                    <MobileLabel>Vendor</MobileLabel>
-                    <span className="text-right md:text-left">
-                      {getVendorName(bill)}
-                      {bill.vendor_account?.service && (
-                        <span className="text-gray-600">
-                          {" "}
-                          · {bill.vendor_account.service}
-                        </span>
-                      )}
-                    </span>
-                  </td>
-                  <td
-                    className={`${stackedCellClassName} md:whitespace-nowrap`}
-                  >
-                    <MobileLabel>Amount</MobileLabel>
-                    {formatCurrency(bill.amount)}
-                  </td>
-                  <td
-                    className={`${stackedCellClassName} md:whitespace-nowrap`}
-                  >
-                    <MobileLabel>Due Date</MobileLabel>
-                    {formatDate(bill.due_date)}
-                  </td>
-                  <td className={`${stackedCellClassName} capitalize`}>
-                    <MobileLabel>Source</MobileLabel>
-                    {bill.source || "—"}
-                  </td>
-                  <td className={`${stackedCellClassName} md:max-w-48`}>
-                    <MobileLabel>Review Reason</MobileLabel>
-                    <span className="text-right md:text-left">
-                      {bill.review_reason || "—"}
-                    </span>
-                  </td>
-                  <td className={stackedCellClassName}>
-                    <MobileLabel>Status</MobileLabel>
-                    <StatusBadge status={bill.status} />
-                  </td>
-                  <td className="block pt-3 md:table-cell md:px-3 md:py-3">
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedBill(bill)}
-                        className="btn-secondary flex-1 px-3 py-2 text-xs md:flex-none"
-                      >
-                        View
-                      </button>
-                      {["pending", "needs_review"].includes(bill.status) &&
-                        canApprove && (
-                          <>
-                            <button
-                              type="button"
-                              disabled={isSubmitting}
-                              onClick={() => {
-                                setRejectionBill(bill);
-                                setRejectionReason("");
-                              }}
-                              className="btn-secondary flex-1 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60 md:flex-none"
-                            >
-                              Reject
-                            </button>
-                            <button
-                              type="button"
-                              disabled={isSubmitting}
-                              onClick={() => handleApprove(bill)}
-                              className="btn-primary flex-1 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60 md:flex-none"
-                            >
-                              Approve
-                            </button>
-                          </>
-                        )}
-                      {bill.status === "approved" && canApprove && (
-                        <button
-                          type="button"
-                          // TODO: open the payment flow once payments are built
-                          className="btn-primary flex-1 px-3 py-2 text-xs md:flex-none"
-                        >
-                          Pay
-                        </button>
-                      )}
-                    </div>
+                    {label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr className="stacked-message-row">
+                  <td colSpan={9} className="stacked-message">
+                    Loading approval queue…
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : errorMessage ? (
+                <tr className="stacked-message-row">
+                  <td colSpan={9} className="stacked-message">
+                    Approval queue could not be loaded.
+                  </td>
+                </tr>
+              ) : filteredBills.length === 0 ? (
+                <tr className="stacked-message-row">
+                  <td colSpan={9} className="stacked-message">
+                    No bills in this category.
+                  </td>
+                </tr>
+              ) : (
+                filteredBills.map((bill) => (
+                  <tr key={bill.id} className={stackedRowClassName}>
+                    <td
+                      className={`${stackedCellClassName} @table:whitespace-nowrap`}
+                    >
+                      <MobileLabel>Invoice #</MobileLabel>
+                      <Link to={`/bills/${bill.id}`} className="link">
+                        {bill.invoice_number || "—"}
+                      </Link>
+                    </td>
+                    <td className={stackedCellClassName}>
+                      <MobileLabel>Property</MobileLabel>
+                      {bill.property?.name || "—"}
+                    </td>
+                    <td className={stackedCellClassName}>
+                      <MobileLabel>Vendor</MobileLabel>
+                      <span className="text-right @table:text-left">
+                        {getVendorName(bill)}
+                        {bill.vendor_account?.service && (
+                          <span className="text-gray-600">
+                            {" "}
+                            · {bill.vendor_account.service}
+                          </span>
+                        )}
+                      </span>
+                    </td>
+                    <td
+                      className={`${stackedCellClassName} @table:whitespace-nowrap`}
+                    >
+                      <MobileLabel>Amount</MobileLabel>
+                      {formatCurrency(bill.amount)}
+                    </td>
+                    <td
+                      className={`${stackedCellClassName} @table:whitespace-nowrap`}
+                    >
+                      <MobileLabel>Due Date</MobileLabel>
+                      {formatDate(bill.due_date)}
+                    </td>
+                    <td className={`${wideOnlyCellClassName} capitalize`}>
+                      <MobileLabel>Source</MobileLabel>
+                      {bill.source || "—"}
+                    </td>
+                    <td
+                      className={`${wideOnlyCellClassName} @table-wide:max-w-48`}
+                    >
+                      <MobileLabel>Review Reason</MobileLabel>
+                      <span className="text-right @table:text-left">
+                        {bill.review_reason || "—"}
+                      </span>
+                    </td>
+                    <td className={stackedCellClassName}>
+                      <MobileLabel>Status</MobileLabel>
+                      <StatusBadge status={bill.status} />
+                    </td>
+                    <td className="stacked-actions">
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedBill(bill)}
+                          className="btn-secondary flex-1 px-3 py-2 text-xs @table:flex-none"
+                        >
+                          View
+                        </button>
+                        {["pending", "needs_review"].includes(bill.status) &&
+                          canApprove && (
+                            <>
+                              <button
+                                type="button"
+                                disabled={isSubmitting}
+                                onClick={() => {
+                                  setRejectionBill(bill);
+                                  setRejectionReason("");
+                                }}
+                                className="btn-secondary flex-1 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60 @table:flex-none"
+                              >
+                                Reject
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isSubmitting}
+                                onClick={() => handleApprove(bill)}
+                                className="btn-primary flex-1 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60 @table:flex-none"
+                              >
+                                Approve
+                              </button>
+                            </>
+                          )}
+                        {bill.status === "approved" && canApprove && (
+                          <button
+                            type="button"
+                            // TODO: open the payment flow once payments are built
+                            className="btn-primary flex-1 px-3 py-2 text-xs @table:flex-none"
+                          >
+                            Pay
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="card mt-8">
