@@ -6,11 +6,15 @@ import { useUserProfile } from "../hooks/useUserProfile";
 import { canManageRecords } from "../utils/permissions";
 import { supabase } from "../../utils/supabase";
 
-// Below md each row becomes a card with a label beside every value
-const stackedRowClassName =
-  "mb-3 block rounded-lg bg-white p-4 md:mb-0 md:table-row md:rounded-none md:border-t md:border-secondary md:bg-transparent md:p-0";
-const stackedCellClassName =
-  "flex justify-between gap-4 py-1 md:table-cell md:px-4 md:py-3";
+// Until there's room for the table, each row becomes a card with a label
+// beside every value (shared classes in index.css)
+const stackedRowClassName = "stacked-row";
+const stackedCellClassName = "stacked-cell";
+
+// Only link to real web pages, never javascript: or other schemes
+function isWebUrl(url) {
+  return /^https?:\/\//i.test(url ?? "");
+}
 
 function VendorDetailsPage() {
   const { vendorId } = useParams();
@@ -115,7 +119,7 @@ function VendorDetailsPage() {
           <section className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
               <h1 className="page-title md:text-3xl">{vendor.name}</h1>
-              {vendor.portal_url && (
+              {isWebUrl(vendor.portal_url) && (
                 <a
                   href={vendor.portal_url}
                   target="_blank"
@@ -180,55 +184,55 @@ function VendorDetailsPage() {
                 This vendor has no associated accounts.
               </p>
             ) : (
-              <table className="mt-4 w-full text-left text-sm">
-                <thead className="hidden md:table-header-group">
-                  <tr className="text-xs uppercase">
-                    <th className="px-4 py-3 font-semibold">Account Number</th>
-                    <th className="px-4 py-3 font-semibold">Service</th>
-                    <th className="px-4 py-3 font-semibold">Payment Type</th>
-                    <th className="px-4 py-3 font-semibold">Status</th>
-                    <th className="px-4 py-3 font-semibold">Property</th>
-                  </tr>
-                </thead>
-                <tbody className="block md:table-row-group">
-                  {accounts.map((account) => (
-                    <tr key={account.id} className={stackedRowClassName}>
-                      <td className={stackedCellClassName}>
-                        <span className="font-semibold md:hidden">
-                          Account #
-                        </span>
-                        {account.account_number || "—"}
-                      </td>
-                      <td className={stackedCellClassName}>
-                        <span className="font-semibold md:hidden">Service</span>
-                        {account.service || "—"}
-                      </td>
-                      <td className={`${stackedCellClassName} capitalize`}>
-                        <span className="font-semibold md:hidden">
-                          Payment Type
-                        </span>
-                        {account.payment_type || "—"}
-                      </td>
-                      <td className={stackedCellClassName}>
-                        <span className="font-semibold md:hidden">Status</span>
-                        <span
-                          className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                            account.status === "active"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {account.status === "active" ? "Active" : "Inactive"}
-                        </span>
-                      </td>
-                      <td className={stackedCellClassName}>
-                        <span className="font-semibold md:hidden">Property</span>
-                        {account.property?.name || "—"}
-                      </td>
+              <div className="table-card table-card-compact mt-4">
+                <table className="stacked-table">
+                  <thead>
+                    <tr>
+                      <th>Account Number</th>
+                      <th>Service</th>
+                      <th>Payment Type</th>
+                      <th>Status</th>
+                      <th>Property</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {accounts.map((account) => (
+                      <tr key={account.id} className={stackedRowClassName}>
+                        <td className={stackedCellClassName}>
+                          <span className="stacked-label">Account #</span>
+                          {account.account_number || "—"}
+                        </td>
+                        <td className={stackedCellClassName}>
+                          <span className="stacked-label">Service</span>
+                          {account.service || "—"}
+                        </td>
+                        <td className={`${stackedCellClassName} capitalize`}>
+                          <span className="stacked-label">Payment Type</span>
+                          {account.payment_type || "—"}
+                        </td>
+                        <td className={stackedCellClassName}>
+                          <span className="stacked-label">Status</span>
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                              account.status === "active"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {account.status === "active"
+                              ? "Active"
+                              : "Inactive"}
+                          </span>
+                        </td>
+                        <td className={stackedCellClassName}>
+                          <span className="stacked-label">Property</span>
+                          {account.property?.name || "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </section>
         </>
