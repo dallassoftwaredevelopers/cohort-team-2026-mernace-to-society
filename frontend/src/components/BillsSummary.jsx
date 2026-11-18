@@ -36,197 +36,89 @@ function BillsSummary() {
   useEffect(() => {
     let isMounted = true;
 
-    async function loadOutstandingBillCount() {
+    async function loadBillCounts() {
       try {
-        const { count, error } = await supabase
-          .from("bill")
-          .select("*", { count: "exact", head: true })
-          .in("status", ["pending", "needs_review", "approved"]);
-
-        if (error) throw error;
-        if (count === null) {
-          throw new Error(
-            "Supabase did not return the outstanding bill count.",
-          );
-        }
-
-        if (isMounted) {
-          setOutstandingBillCount(count);
-          setOutstandingBillCountError("");
-        }
-      } catch (error) {
-        if (isMounted) {
-          setOutstandingBillCountError(
-            error instanceof Error
-              ? error.message
-              : "Could not load outstanding bills.",
-          );
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingOutstandingBillCount(false);
-        }
-      }
-    }
-
-    loadOutstandingBillCount();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadPaidBillCount() {
-      try {
-        const now = new Date();
-        const formatDate = (date) =>
-          [
-            date.getFullYear(),
-            String(date.getMonth() + 1).padStart(2, "0"),
-            String(date.getDate()).padStart(2, "0"),
-          ].join("-");
-        const startOfMonth = formatDate(
-          new Date(now.getFullYear(), now.getMonth(), 1),
-        );
-        const startOfNextMonth = formatDate(
-          new Date(now.getFullYear(), now.getMonth() + 1, 1),
-        );
-
-        const { count, error } = await supabase
-          .from("bill")
-          .select("*", { count: "exact", head: true })
-          .eq("status", "paid")
-          .gte("paid_on", startOfMonth)
-          .lt("paid_on", startOfNextMonth);
-
-        if (error) throw error;
-        if (count === null) {
-          throw new Error("Supabase did not return the paid bill count.");
-        }
-
-        if (isMounted) {
-          setPaidBillCount(count);
-          setPaidBillCountError("");
-        }
-      } catch (error) {
-        if (isMounted) {
-          setPaidBillCountError(
-            error instanceof Error
-              ? error.message
-              : "Could not load paid bills.",
-          );
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingPaidBillCount(false);
-        }
-      }
-    }
-
-    loadPaidBillCount();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadMonthlySpendingTotal() {
-      try {
-        const now = new Date();
-        const formatDate = (date) =>
-          [
-            date.getFullYear(),
-            String(date.getMonth() + 1).padStart(2, "0"),
-            String(date.getDate()).padStart(2, "0"),
-          ].join("-");
-        const startOfMonth = formatDate(
-          new Date(now.getFullYear(), now.getMonth(), 1),
-        );
-        const startOfNextMonth = formatDate(
-          new Date(now.getFullYear(), now.getMonth() + 1, 1),
-        );
-
         const { data, error } = await supabase
           .from("bill")
-          .select("amount")
-          .eq("status", "paid")
-          .gte("paid_on", startOfMonth)
-          .lt("paid_on", startOfNextMonth);
+          .select("id, status, amount, paid_on");
 
         if (error) throw error;
 
-        const total = (data ?? []).reduce(
-          (sum, bill) => sum + Number(bill.amount || 0),
+        if (!isMounted) return;
+
+        const now = new Date();
+        const formatDate = (date) =>
+          [
+            date.getFullYear(),
+            String(date.getMonth() + 1).padStart(2, "0"),
+            String(date.getDate()).padStart(2, "0"),
+          ].join("-");
+
+        const startOfMonth = formatDate(
+          new Date(now.getFullYear(), now.getMonth(), 1),
+        );
+        const startOfNextMonth = formatDate(
+          new Date(now.getFullYear(), now.getMonth() + 1, 1),
+        );
+
+        const reviewCount = (data ?? []).filter(
+          (b) => b.status === "needs_review",
+        ).length;
+
+        const outstandingCount = (data ?? []).filter((b) =>
+          ["pending", "needs_review", "approved"].includes(b.status),
+        ).length;
+
+        const paidThisMonth = (data ?? []).filter(
+          (b) =>
+            b.status === "paid" &&
+            b.paid_on >= startOfMonth &&
+            b.paid_on < startOfNextMonth,
+        );
+
+        const paidCount = paidThisMonth.length;
+        const spendingTotal = paidThisMonth.reduce(
+          (sum, b) => sum + Number(b.amount || 0),
           0,
         );
 
         if (isMounted) {
-          setMonthlySpendingTotal(total);
+          setReviewBillCount(reviewCount);
+          setOutstandingBillCount(outstandingCount);
+          setPaidBillCount(paidCount);
+          setMonthlySpendingTotal(spendingTotal);
+
+          setReviewBillCountError("");
+          setOutstandingBillCountError("");
+          setPaidBillCountError("");
           setMonthlySpendingTotalError("");
+
+          setIsLoadingReviewBillCount(false);
+          setIsLoadingOutstandingBillCount(false);
+          setIsLoadingPaidBillCount(false);
+          setIsLoadingMonthlySpendingTotal(false);
         }
       } catch (error) {
         if (isMounted) {
-          setMonthlySpendingTotalError(
+          const errorMsg =
             error instanceof Error
               ? error.message
-              : "Could not load monthly spending total.",
-          );
-        }
-      } finally {
-        if (isMounted) {
+              : "Could not load bill counts";
+
+          setReviewBillCountError(errorMsg);
+          setOutstandingBillCountError(errorMsg);
+          setPaidBillCountError(errorMsg);
+          setMonthlySpendingTotalError(errorMsg);
+
+          setIsLoadingReviewBillCount(false);
+          setIsLoadingOutstandingBillCount(false);
+          setIsLoadingPaidBillCount(false);
           setIsLoadingMonthlySpendingTotal(false);
         }
       }
     }
 
-    loadMonthlySpendingTotal();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadReviewBillCount() {
-      try {
-        const { count, error } = await supabase
-          .from("bill")
-          .select("*", { count: "exact", head: true })
-          .eq("status", "needs_review");
-
-        if (error) throw error;
-        if (count === null) {
-          throw new Error("Supabase did not return the review bill count.");
-        }
-
-        if (isMounted) {
-          setReviewBillCount(count);
-          setReviewBillCountError("");
-        }
-      } catch (error) {
-        if (isMounted) {
-          setReviewBillCountError(
-            error instanceof Error
-              ? error.message
-              : "Could not load bills requiring review.",
-          );
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingReviewBillCount(false);
-        }
-      }
-    }
-
-    loadReviewBillCount();
+    loadBillCounts();
 
     return () => {
       isMounted = false;
