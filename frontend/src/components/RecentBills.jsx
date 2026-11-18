@@ -6,12 +6,11 @@ import { formatCurrency, formatDate } from "../utils/format";
 
 const recentBillColumns = 6;
 
-// Below md each row becomes a card with a label beside every value
-const stackedRowClassName =
-  "mb-4 block rounded-lg bg-white p-4 md:mb-0 md:table-row md:rounded-none md:border-t md:border-secondary md:bg-transparent md:p-0";
-const stackedCellClassName =
-  "flex justify-between gap-4 py-1 md:table-cell md:px-4 md:py-4";
-const cellMessageClassName = "block px-4 py-8 text-center md:table-cell";
+// Until there's room for the table, each row becomes a card with a label
+// beside every value (shared classes in index.css)
+const stackedRowClassName = "stacked-row";
+const stackedCellClassName = "stacked-cell";
+const cellMessageClassName = "stacked-message";
 
 function RecentBills() {
   const [bills, setBills] = useState([]);
@@ -51,21 +50,21 @@ function RecentBills() {
   return (
     <section className="card mt-8">
       <h2 className="section-title">Recent Bills</h2>
-      <div className="mt-4">
-        <table className="w-full text-left text-sm">
-          <thead className="hidden md:table-header-group">
-            <tr className="text-xs uppercase">
-              <th className="px-4 py-3 font-semibold">Bill #</th>
-              <th className="px-4 py-3 font-semibold">Property</th>
-              <th className="px-4 py-3 font-semibold">Vendor</th>
-              <th className="px-4 py-3 font-semibold">Due Date</th>
-              <th className="px-4 py-3 font-semibold">Amount</th>
-              <th className="px-4 py-3 font-semibold">Status</th>
+      <div className="table-card table-card-compact mt-4">
+        <table className="stacked-table">
+          <thead>
+            <tr>
+              <th>Bill #</th>
+              <th>Property</th>
+              <th>Vendor</th>
+              <th>Due Date</th>
+              <th>Amount</th>
+              <th>Status</th>
             </tr>
           </thead>
-          <tbody className="block md:table-row-group">
+          <tbody>
             {loading ? (
-              <tr className="block md:table-row">
+              <tr className="stacked-message-row">
                 <td
                   colSpan={recentBillColumns}
                   className={`${cellMessageClassName} text-gray-600`}
@@ -75,7 +74,7 @@ function RecentBills() {
                 </td>
               </tr>
             ) : errorMessage ? (
-              <tr className="block md:table-row">
+              <tr className="stacked-message-row">
                 <td
                   colSpan={recentBillColumns}
                   className={`${cellMessageClassName} text-red-700`}
@@ -85,7 +84,7 @@ function RecentBills() {
                 </td>
               </tr>
             ) : bills.length === 0 ? (
-              <tr className="block md:table-row">
+              <tr className="stacked-message-row">
                 <td
                   colSpan={recentBillColumns}
                   className={`${cellMessageClassName} text-gray-600`}
@@ -97,41 +96,41 @@ function RecentBills() {
               bills.map((bill) => (
                 <tr key={bill.id} className={stackedRowClassName}>
                   <td
-                    className={`${stackedCellClassName} md:whitespace-nowrap`}
+                    className={`${stackedCellClassName} @table-compact:whitespace-nowrap`}
                   >
-                    <span className="font-semibold md:hidden">Bill #</span>
+                    <span className="stacked-label">Bill #</span>
                     <Link to={`/bills/${bill.id}`} className="link">
                       {bill.invoice_number ?? "—"}
                     </Link>
                   </td>
                   <td className={stackedCellClassName}>
-                    <span className="font-semibold md:hidden">Property</span>
-                    <span className="text-right md:text-left">
+                    <span className="stacked-label">Property</span>
+                    <span className="text-right @table-compact:text-left">
                       {bill.property?.name ?? "—"}
                     </span>
                   </td>
                   <td className={stackedCellClassName}>
-                    <span className="font-semibold md:hidden">Vendor</span>
-                    <span className="text-right md:text-left">
+                    <span className="stacked-label">Vendor</span>
+                    <span className="text-right @table-compact:text-left">
                       {bill.vendor_account?.vendor?.name ??
                         bill.extracted_vendor_name ??
                         "—"}
                     </span>
                   </td>
                   <td
-                    className={`${stackedCellClassName} md:whitespace-nowrap`}
+                    className={`${stackedCellClassName} @table-compact:whitespace-nowrap`}
                   >
-                    <span className="font-semibold md:hidden">Due Date</span>
+                    <span className="stacked-label">Due Date</span>
                     {formatDate(bill.due_date)}
                   </td>
                   <td
-                    className={`${stackedCellClassName} md:whitespace-nowrap`}
+                    className={`${stackedCellClassName} @table-compact:whitespace-nowrap`}
                   >
-                    <span className="font-semibold md:hidden">Amount</span>
+                    <span className="stacked-label">Amount</span>
                     {formatCurrency(bill.amount)}
                   </td>
                   <td className={stackedCellClassName}>
-                    <span className="font-semibold md:hidden">Status</span>
+                    <span className="stacked-label">Status</span>
                     <StatusBadge status={bill.status} />
                   </td>
                 </tr>

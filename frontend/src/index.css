@@ -16,6 +16,8 @@
      wide. Container width, not screen width, so the sidebar doesn't matter. */
   --container-table: 60rem;
   --container-table-wide: 80rem;
+  /* Smaller tables (few short columns) can switch sooner */
+  --container-table-compact: 44rem;
 }
 
 @layer base {
@@ -163,5 +165,44 @@
   /* Columns that only fit in the table on very wide containers */
   .wide-only {
     @apply @table:hidden @table-wide:table-cell;
+  }
+
+  /* Add .table-card-compact next to .table-card for small tables. They turn
+     into a table at --container-table-compact; use @table-compact: (not
+     @table:) for any extra table-view classes on the page. */
+  .table-card-compact .stacked-table thead {
+    @apply @table-compact:table-header-group;
+  }
+
+  .table-card-compact .stacked-table tbody {
+    @apply @table-compact:table-row-group;
+  }
+
+  .table-card-compact .stacked-row {
+    @apply @table-compact:mb-0 @table-compact:table-row @table-compact:rounded-none @table-compact:border-t @table-compact:border-secondary @table-compact:bg-transparent @table-compact:p-0;
+  }
+
+  .table-card-compact .stacked-cell {
+    @apply @table-compact:table-cell @table-compact:px-3 @table-compact:py-3;
+  }
+
+  .table-card-compact .stacked-label {
+    @apply @table-compact:hidden;
+  }
+
+  .table-card-compact .stacked-actions {
+    @apply @table-compact:table-cell @table-compact:px-3 @table-compact:py-3 @table-compact:whitespace-nowrap;
+  }
+
+  .table-card-compact .stacked-message-row {
+    @apply @table-compact:table-row;
+  }
+
+  .table-card-compact .stacked-message {
+    @apply @table-compact:table-cell;
+  }
+
+  .table-card-compact .table-only {
+    @apply @table-compact:table-cell;
   }
 }
