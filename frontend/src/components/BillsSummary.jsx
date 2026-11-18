@@ -242,7 +242,10 @@ function BillsSummary() {
           className="card block transition hover:ring-2 hover:ring-primary focus-visible:outline-2 focus-visible:outline-primary"
         >
           <h3 className="text-sm font-semibold">{title}</h3>
-          <p className="mt-3 text-2xl font-bold md:text-3xl" aria-live="polite">
+          <p
+            className="mt-3 text-2xl font-bold break-words xl:text-3xl"
+            aria-live="polite"
+          >
             {title === "Bills to Review"
               ? reviewBillCountError
                 ? "—"

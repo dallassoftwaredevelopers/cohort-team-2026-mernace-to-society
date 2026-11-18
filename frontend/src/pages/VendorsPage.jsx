@@ -17,14 +17,25 @@ const serviceTypes = [
 
 // width keeps the columns lined up across every service type table
 const columns = [
-  { label: "Vendor Name", key: "name", mobile: true, width: "md:w-1/4" },
-  { label: "Also On Bills As", key: "aliases" },
-  { label: "Accounts", key: "accounts", width: "md:w-24" },
-  { label: "Open Bills", key: "open_bills", width: "md:w-28" },
-  { label: "Status", key: "status", mobile: true, width: "md:w-28" },
+  {
+    label: "Vendor Name",
+    key: "name",
+    mobile: true,
+    width: "@table-compact:w-1/4",
+  },
+  { label: "Also On Bills As", key: "aliases", wideOnly: true },
+  { label: "Accounts", key: "accounts", width: "@table-compact:w-24" },
+  { label: "Open Bills", key: "open_bills", width: "@table-compact:w-28" },
+  {
+    label: "Status",
+    key: "status",
+    mobile: true,
+    width: "@table-compact:w-28",
+  },
 ];
 
-const hideOnMobile = (col) => (col.mobile ? "" : "hidden md:table-cell");
+const hideOnMobile = (col) =>
+  col.mobile ? "" : col.wideOnly ? "hidden @table:table-cell" : "table-only";
 
 function renderVendorCell(
   col,
@@ -428,12 +439,12 @@ function VendorsPage() {
         ))}
 
         {canEditRecords && (
-          <th className="hidden px-4 py-3 font-semibold md:table-cell md:w-24">
+          <th className="table-only px-4 py-3 font-semibold @table-compact:w-24">
             Actions
           </th>
         )}
 
-        <th className="w-8 md:hidden">
+        <th className="w-8 @table-compact:hidden">
           <span className="sr-only">Open</span>
         </th>
       </tr>
@@ -468,7 +479,7 @@ function VendorsPage() {
         ))}
 
         {canEditRecords && (
-          <td className="hidden px-4 py-3 md:table-cell">
+          <td className="table-only px-4 py-3">
             <button
               type="button"
               onClick={() => {
@@ -484,7 +495,10 @@ function VendorsPage() {
           </td>
         )}
 
-        <td className="pr-4 text-right md:hidden" aria-hidden="true">
+        <td
+          className="pr-4 text-right @table-compact:hidden"
+          aria-hidden="true"
+        >
           →
         </td>
       </tr>
@@ -626,32 +640,29 @@ function VendorsPage() {
                   </span>
                 </div>
 
-                <table className="mt-2 w-full rounded-lg bg-white text-left text-sm md:table-fixed">
-                  {tableHead}
-                  <tbody>
-                    {typeVendors.length === 0 ? (
-                      <tr className="border-t border-secondary">
-                        <td
-                          colSpan={columns.length + (canEditRecords ? 3 : 1)}
-                          className="px-4 py-3 text-gray-600"
-                        >
-                          No vendors for this service type.
-                        </td>
-                      </tr>
-                    ) : (
-                      typeVendors.map((vendor) =>
-                        renderVendorRow(
-                          vendor,
-                          (vendor.vendor_account || []).filter(
-                            (account) =>
-                              account.service?.toLowerCase() ===
-                              type.toLowerCase(),
-                          ).length,
-                        ),
-                      )
-                    )}
-                  </tbody>
-                </table>
+                {typeVendors.length === 0 ? (
+                  <p className="mt-2 rounded-lg bg-white px-4 py-3 text-sm text-gray-600">
+                    No vendors for this service type.
+                  </p>
+                ) : (
+                  <div className="table-card table-card-compact mt-2">
+                    <table className="w-full rounded-lg bg-white text-left text-sm @table-compact:table-fixed">
+                      {tableHead}
+                      <tbody>
+                        {typeVendors.map((vendor) =>
+                          renderVendorRow(
+                            vendor,
+                            (vendor.vendor_account || []).filter(
+                              (account) =>
+                                account.service?.toLowerCase() ===
+                                type.toLowerCase(),
+                            ).length,
+                          ),
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             ))}
 
@@ -665,14 +676,16 @@ function VendorsPage() {
                   </span>
                 </div>
 
-                <table className="mt-2 w-full rounded-lg bg-white text-left text-sm md:table-fixed">
-                  {tableHead}
-                  <tbody>
-                    {unassignedVendors.map((vendor) =>
-                      renderVendorRow(vendor, 0),
-                    )}
-                  </tbody>
-                </table>
+                <div className="table-card table-card-compact mt-2">
+                  <table className="w-full rounded-lg bg-white text-left text-sm @table-compact:table-fixed">
+                    {tableHead}
+                    <tbody>
+                      {unassignedVendors.map((vendor) =>
+                        renderVendorRow(vendor, 0),
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </>

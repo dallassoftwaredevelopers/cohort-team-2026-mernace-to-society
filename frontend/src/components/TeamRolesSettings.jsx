@@ -61,42 +61,35 @@ function TeamRolesSettings({
           </p>
         )}
 
-        <div className="overflow-x-auto">
-          <table className="mt-4 w-full rounded-lg bg-white text-left text-sm">
+        <div className="table-card table-card-compact mt-4">
+          <table className="stacked-table">
             <thead>
-              <tr className="text-xs uppercase">
+              <tr>
                 {teamColumns.map((col) => (
-                  <th
-                    key={col.key}
-                    className={`px-4 py-3 font-semibold ${hideOnMobile(col)}`}
-                  >
+                  <th key={col.key} className={hideOnMobile(col)}>
                     {col.label}
                   </th>
                 ))}
-                {canEditTeam && (
-                  <th className="px-4 py-3 text-right font-semibold">
-                    Actions
-                  </th>
-                )}
+                {canEditTeam && <th className="text-right">Actions</th>}
               </tr>
             </thead>
 
             <tbody>
               {isLoadingTeamMembers && (
-                <tr className="border-t border-secondary">
+                <tr className="stacked-message-row">
                   <td
                     colSpan={teamColumns.length + (canEditTeam ? 1 : 0)}
-                    className="px-4 py-4 text-center"
+                    className="stacked-message"
                   >
                     Loading team members...
                   </td>
                 </tr>
               )}
               {!isLoadingTeamMembers && teamMembersError && (
-                <tr className="border-t border-secondary">
+                <tr className="stacked-message-row">
                   <td
                     colSpan={teamColumns.length + (canEditTeam ? 1 : 0)}
-                    className="px-4 py-4 text-center text-red-700"
+                    className="stacked-message text-red-700"
                     role="alert"
                   >
                     {teamMembersError}
@@ -106,10 +99,10 @@ function TeamRolesSettings({
               {!isLoadingTeamMembers &&
                 !teamMembersError &&
                 teamMembers.length === 0 && (
-                  <tr className="border-t border-secondary">
+                  <tr className="stacked-message-row">
                     <td
                       colSpan={teamColumns.length + (canEditTeam ? 1 : 0)}
-                      className="px-4 py-4 text-center"
+                      className="stacked-message"
                     >
                       No team members found.
                     </td>
@@ -118,12 +111,13 @@ function TeamRolesSettings({
               {!isLoadingTeamMembers &&
                 !teamMembersError &&
                 teamMembers.map((member) => (
-                  <tr key={member.id} className="border-t border-secondary">
+                  <tr key={member.id} className="stacked-row">
                     {teamColumns.map((col) => (
                       <td
                         key={col.key}
-                        className={`px-4 py-3 ${hideOnMobile(col)}`}
+                        className={`stacked-cell ${col.mobile ? "" : "@table-compact:hidden @table:table-cell"}`}
                       >
+                        <span className="stacked-label">{col.label}</span>
                         {col.key === "status" ? (
                           <span
                             className={`rounded-full px-3 py-1 text-xs font-semibold ${
@@ -145,14 +139,14 @@ function TeamRolesSettings({
                       </td>
                     ))}
                     {canEditTeam && (
-                      <td className="px-4 py-3 text-right">
+                      <td className="stacked-actions @table-compact:text-right">
                         {member.id === authUser?.id ? (
                           <span className="text-xs text-gray-500">
                             Your account
                           </span>
                         ) : (
-                          <div className="flex items-center justify-end gap-2">
-                            <div className="relative">
+                          <div className="flex items-center gap-2 @table-compact:justify-end">
+                            <div className="relative flex-1 @table-compact:flex-none">
                               <select
                                 aria-label={`Role for ${member.name || member.email}`}
                                 value={
@@ -166,7 +160,7 @@ function TeamRolesSettings({
                                     role: e.target.value,
                                   })
                                 }
-                                className="appearance-none rounded-lg border border-secondary bg-white py-3 pl-4 pr-10 text-sm"
+                                className="w-full appearance-none rounded-lg border border-secondary bg-white py-2 pl-3 pr-9 text-xs"
                               >
                                 <option value="staff">Staff</option>
                                 <option value="manager">Manager</option>
@@ -180,7 +174,7 @@ function TeamRolesSettings({
                             </div>
                             <button
                               type="button"
-                              className="btn-secondary min-w-32 px-4 py-3 text-sm disabled:opacity-50"
+                              className="btn-secondary flex-1 px-3 py-2 text-xs disabled:opacity-50 @table-compact:flex-none @table-compact:min-w-24"
                               disabled={isSavingTeam}
                               onClick={() =>
                                 updateTeamDraft(member, {

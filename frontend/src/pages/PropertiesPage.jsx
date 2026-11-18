@@ -342,119 +342,121 @@ function PropertiesPage() {
                   </p>
                 </div>
 
-                <table className="w-full text-left text-sm md:table-fixed md:rounded-lg md:bg-white">
-                  <thead className="hidden text-xs uppercase md:table-header-group">
-                    <tr>
-                      <th className="px-4 py-3 font-semibold md:w-1/4">
-                        Property Name
-                      </th>
-                      <th className="px-4 py-3 font-semibold">Address</th>
-                      <th className="px-4 py-3 font-semibold md:w-32">
-                        Status
-                      </th>
-                      {canEditRecords && (
-                        <th className="px-4 py-3 text-right font-semibold md:w-48">
-                          Actions
+                <div className="table-card table-card-compact">
+                  <table className="w-full text-left text-sm @table-compact:table-fixed @table-compact:rounded-lg @table-compact:bg-white">
+                    <thead className="hidden text-xs uppercase @table-compact:table-header-group">
+                      <tr>
+                        <th className="px-4 py-3 font-semibold @table-compact:w-1/4">
+                          Property Name
                         </th>
-                      )}
-                    </tr>
-                  </thead>
+                        <th className="px-4 py-3 font-semibold">Address</th>
+                        <th className="px-4 py-3 font-semibold @table-compact:w-32">
+                          Status
+                        </th>
+                        {canEditRecords && (
+                          <th className="px-4 py-3 text-right font-semibold @table-compact:w-48">
+                            Actions
+                          </th>
+                        )}
+                      </tr>
+                    </thead>
 
-                  {/* Rows have actions, so below md each row stacks into a card */}
-                  <tbody className="block md:table-row-group">
-                    {typeProperties.map((property) => {
-                      const address = [
-                        property.street,
-                        property.city,
-                        property.state,
-                        property.zip,
-                      ]
-                        .filter(
-                          (value) =>
-                            value !== null &&
-                            value !== undefined &&
-                            value !== "",
-                        )
-                        .join(", ");
+                    {/* Rows have actions,until there’s room, each row stacks into a card. */}
+                    <tbody className="block @table-compact:table-row-group">
+                      {typeProperties.map((property) => {
+                        const address = [
+                          property.street,
+                          property.city,
+                          property.state,
+                          property.zip,
+                        ]
+                          .filter(
+                            (value) =>
+                              value !== null &&
+                              value !== undefined &&
+                              value !== "",
+                          )
+                          .join(", ");
 
-                      return (
-                        <tr
-                          key={property.id}
-                          className="mb-3 block rounded-lg bg-white p-4 md:mb-0 md:table-row md:rounded-none md:border-t md:border-secondary md:p-0"
-                        >
-                          <td className="block py-1 font-semibold md:table-cell md:px-4 md:py-3 md:font-medium">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                navigate(`/properties/${property.id}`)
-                              }
-                              className="link text-left"
-                            >
-                              {property.name}
-                            </button>
-                          </td>
-
-                          <td className="block py-1 text-gray-700 md:table-cell md:px-4 md:py-3 md:text-black">
-                            {address || "—"}
-                          </td>
-
-                          <td className="block py-2 md:table-cell md:px-4 md:py-3">
-                            {canEditRecords ? (
+                        return (
+                          <tr
+                            key={property.id}
+                            className="mb-3 block rounded-lg bg-white p-4 @table-compact:mb-0 @table-compact:table-row @table-compact:rounded-none @table-compact:border-t @table-compact:border-secondary @table-compact:p-0"
+                          >
+                            <td className="block py-1 font-semibold @table-compact:table-cell @table-compact:px-4 @table-compact:py-3 @table-compact:font-medium">
                               <button
                                 type="button"
-                                onClick={() => handleStatusChange(property)}
-                                className={`rounded-full px-3 py-2 text-xs font-semibold transition-colors md:py-1 ${
-                                  property.status === "active"
-                                    ? "bg-green-100 text-green-800 hover:bg-green-200"
-                                    : "bg-red-100 text-red-800 hover:bg-red-200"
-                                }`}
-                                title="Click to change status"
+                                onClick={() =>
+                                  navigate(`/properties/${property.id}`)
+                                }
+                                className="link text-left"
                               >
-                                {property.status === "active"
-                                  ? "Active"
-                                  : "Inactive"}
+                                {property.name}
                               </button>
-                            ) : (
-                              <span
-                                className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                  property.status === "active"
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-red-100 text-red-800"
-                                }`}
-                              >
-                                {property.status === "active"
-                                  ? "Active"
-                                  : "Inactive"}
-                              </span>
-                            )}
-                          </td>
-
-                          {canEditRecords && (
-                            <td className="block pt-2 md:table-cell md:px-4 md:py-3">
-                              <div className="flex gap-2 md:justify-end">
-                                <button
-                                  type="button"
-                                  onClick={() => openEditForm(property)}
-                                  className="btn-secondary flex-1 px-4 py-2 text-xs md:flex-none"
-                                >
-                                  Edit
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => handleDelete(property)}
-                                  className="btn-danger flex-1 px-4 py-2 text-xs md:flex-none"
-                                >
-                                  Delete
-                                </button>
-                              </div>
                             </td>
-                          )}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+
+                            <td className="block py-1 text-gray-700 @table-compact:table-cell @table-compact:px-4 @table-compact:py-3 @table-compact:text-black">
+                              {address || "—"}
+                            </td>
+
+                            <td className="block py-2 @table-compact:table-cell @table-compact:px-4 @table-compact:py-3">
+                              {canEditRecords ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusChange(property)}
+                                  className={`rounded-full px-3 py-2 text-xs font-semibold transition-colors @table-compact:py-1 ${
+                                    property.status === "active"
+                                      ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                      : "bg-red-100 text-red-800 hover:bg-red-200"
+                                  }`}
+                                  title="Click to change status"
+                                >
+                                  {property.status === "active"
+                                    ? "Active"
+                                    : "Inactive"}
+                                </button>
+                              ) : (
+                                <span
+                                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                    property.status === "active"
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-red-100 text-red-800"
+                                  }`}
+                                >
+                                  {property.status === "active"
+                                    ? "Active"
+                                    : "Inactive"}
+                                </span>
+                              )}
+                            </td>
+
+                            {canEditRecords && (
+                              <td className="block pt-2 @table-compact:table-cell @table-compact:px-4 @table-compact:py-3">
+                                <div className="flex gap-2 @table-compact:justify-end">
+                                  <button
+                                    type="button"
+                                    onClick={() => openEditForm(property)}
+                                    className="btn-secondary flex-1 px-4 py-2 text-xs @table-compact:flex-none"
+                                  >
+                                    Edit
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDelete(property)}
+                                    className="btn-danger flex-1 border border-red-200 px-4 py-2 text-xs @table-compact:flex-none"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </section>
             ))
           )}

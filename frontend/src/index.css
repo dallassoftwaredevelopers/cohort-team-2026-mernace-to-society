@@ -12,6 +12,12 @@
   --color-sidebar: #182b49;
   --color-sidebar-hover: #2b405d;
   --color-sidebar-avatar: #8a9bb6;
+  /* Tables switch from stacked cards to rows once their container is this
+     wide. Container width, not screen width, so the sidebar doesn't matter. */
+  --container-table: 60rem;
+  --container-table-wide: 80rem;
+  /* Smaller tables (few short columns) can switch sooner */
+  --container-table-compact: 44rem;
 }
 
 @layer base {
@@ -31,7 +37,7 @@
     min-height: 100vh;
   }
 
-  button:not(:disabled), 
+  button:not(:disabled),
   [role="button"]:not(:disabled):not([aria-disabled="true"]) {
     cursor: pointer;
   }
@@ -100,5 +106,103 @@
 
   .modal-overlay {
     @apply fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4 md:pl-68;
+  }
+
+  /* ---- Responsive tables ----
+     Wrap a table in .table-card. Below --container-table each row is a card
+     with labels; at --container-table and up it's a normal table. */
+  .table-card {
+    @apply @container overflow-x-auto;
+  }
+
+  .stacked-table {
+    @apply w-full text-left text-sm;
+  }
+
+  .stacked-table thead {
+    @apply hidden @table:table-header-group;
+  }
+
+  .stacked-table tbody {
+    @apply block @table:table-row-group;
+  }
+
+  .stacked-table th {
+    @apply px-3 py-3 text-xs font-semibold uppercase;
+  }
+
+  .stacked-row {
+    @apply mb-4 block rounded-lg bg-white p-4 @table:mb-0 @table:table-row @table:rounded-none @table:border-t @table:border-secondary @table:bg-transparent @table:p-0;
+  }
+
+  .stacked-cell {
+    @apply flex justify-between gap-4 py-1 @table:table-cell @table:px-3 @table:py-3;
+  }
+
+  /* The label shown beside each value on cards; hidden in table view */
+  .stacked-label {
+    @apply font-semibold @table:hidden;
+  }
+
+  .stacked-actions {
+    @apply block pt-3 @table:table-cell @table:px-3 @table:py-3 @table:whitespace-nowrap;
+  }
+
+  /* Loading / empty / error rows that span the whole table */
+  .stacked-message-row {
+    @apply block @table:table-row;
+  }
+
+  .stacked-message {
+    @apply block px-4 py-12 text-center text-gray-600 @table:table-cell;
+  }
+
+  /* Columns only worth showing in table view (hidden on cards) */
+  .table-only {
+    @apply hidden @table:table-cell;
+  }
+
+  /* Columns that only fit in the table on very wide containers */
+  .wide-only {
+    @apply @table:hidden @table-wide:table-cell;
+  }
+
+  /* Add .table-card-compact next to .table-card for small tables. They turn
+     into a table at --container-table-compact; use @table-compact: (not
+     @table:) for any extra table-view classes on the page. */
+  .table-card-compact .stacked-table thead {
+    @apply @table-compact:table-header-group;
+  }
+
+  .table-card-compact .stacked-table tbody {
+    @apply @table-compact:table-row-group;
+  }
+
+  .table-card-compact .stacked-row {
+    @apply @table-compact:mb-0 @table-compact:table-row @table-compact:rounded-none @table-compact:border-t @table-compact:border-secondary @table-compact:bg-transparent @table-compact:p-0;
+  }
+
+  .table-card-compact .stacked-cell {
+    @apply @table-compact:table-cell @table-compact:px-3 @table-compact:py-3;
+  }
+
+  .table-card-compact .stacked-label {
+    @apply @table-compact:hidden;
+  }
+
+  .table-card-compact .stacked-actions {
+    @apply @table-compact:table-cell @table-compact:px-3 @table-compact:py-3 @table-compact:whitespace-nowrap;
+  }
+
+  .table-card-compact .stacked-message-row {
+    @apply @table-compact:table-row;
+  }
+
+  .table-card-compact .stacked-message {
+    @apply @table-compact:table-cell;
+  }
+
+  .table-card-compact .table-only {
+    @apply @table-compact:table-cell;
   }
 }

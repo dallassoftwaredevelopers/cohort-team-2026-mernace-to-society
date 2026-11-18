@@ -9,7 +9,10 @@ import {
   getInitials,
   useUserProfile,
 } from "../hooks/useUserProfile";
-import { PASSWORD_RULES_ERROR, passwordMeetsRules } from "../../utils/passwordRules";
+import {
+  PASSWORD_RULES_ERROR,
+  passwordMeetsRules,
+} from "../../utils/passwordRules";
 
 const tabs = ["Profile", "Organization", "Payment Methods", "Team & Roles"];
 
@@ -110,7 +113,8 @@ const roleDescriptions = [
   },
 ];
 
-const hideOnMobile = (col) => (col.mobile ? "" : "hidden md:table-cell");
+// Email shows on the cards, but in table view only once there's room
+const hideOnMobile = (col) => (col.mobile ? "" : "hidden @table:table-cell");
 
 function AccountSettingsPage() {
   const {
@@ -427,24 +431,23 @@ function AccountSettingsPage() {
     setPasswordError("");
     setPasswordSuccess("");
 
-    if(!passwordMeetsRules(passwords.new_password)){
+    if (!passwordMeetsRules(passwords.new_password)) {
       setPasswordError(PASSWORD_RULES_ERROR);
       return;
     }
 
     if (passwords.new_password !== passwords.confirm_new_password) {
       setPasswordError(
-        "New password and Confirm new password fields do not match. Please try again."
+        "New password and Confirm new password fields do not match. Please try again.",
       );
       return;
     }
 
     setIsUpdatingPassword(true);
     try {
-      
       // Re-authenticate with the current password before accepting a new one.
       const {
-      data: { user },
+        data: { user },
       } = await supabase.auth.getUser();
 
       const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -454,8 +457,8 @@ function AccountSettingsPage() {
 
       if (signInError) {
         setPasswordError(
-          "Current password entry is incorrect. Please try again."
-        )
+          "Current password entry is incorrect. Please try again.",
+        );
         return;
       }
 
@@ -467,22 +470,23 @@ function AccountSettingsPage() {
       if (updateError) {
         setPasswordError(updateError.message);
         return;
-      } 
-      
+      }
+
       setPasswordSuccess("Your password has been updated.");
       setPasswords({
         current_password: "",
         new_password: "",
         confirm_new_password: "",
       });
-
     } catch (error) {
       setPasswordError(
-        error instanceof Error ? error.message : "Could not update your password.",
+        error instanceof Error
+          ? error.message
+          : "Could not update your password.",
       );
     } finally {
-        setIsUpdatingPassword(false);
-    }  
+      setIsUpdatingPassword(false);
+    }
   }
 
   return (

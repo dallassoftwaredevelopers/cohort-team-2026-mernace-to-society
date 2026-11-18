@@ -9,7 +9,7 @@ function PaymentMethodsSettings({
 }) {
   return (
     <>
-      {/* Payment methods list — stacks into cards below md */}
+      {/* Payment methods list — stacks into cards until the table has room */}
       <section className="card mt-8">
         <div className="section-header">
           <div>
@@ -32,56 +32,54 @@ function PaymentMethodsSettings({
           </p>
         )}
 
-        <table className="mt-4 w-full text-left text-sm">
-          <thead className="hidden md:table-header-group">
-            <tr className="text-xs uppercase">
-              {paymentColumns.map((col) => (
-                <th key={col.key} className="px-4 py-3 font-semibold">
-                  {col.label}
-                </th>
-              ))}
-              {isOrganizationAdmin && (
-                <th className="px-4 py-3 text-right font-semibold">Actions</th>
-              )}
-            </tr>
-          </thead>
+        <div className="table-card table-card-compact mt-4">
+          <table className="stacked-table">
+            <thead>
+              <tr>
+                {paymentColumns.map((col) => (
+                  <th key={col.key}>{col.label}</th>
+                ))}
+                {isOrganizationAdmin && <th className="text-right">Actions</th>}
+              </tr>
+            </thead>
 
-          <tbody className="block md:table-row-group">
-            {/* Placeholder row — replace with mapped payment method data later */}
-            <tr className="mb-4 block rounded-lg bg-white p-4 md:mb-0 md:table-row md:bg-transparent md:p-0">
-              {paymentColumns.map((col) => (
-                <td
-                  key={col.key}
-                  className="flex justify-between py-1 md:table-cell md:px-4 md:py-4"
-                >
-                  <span className="font-semibold md:hidden">{col.label}</span>
-                  {col.key === "status" ? (
-                    <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold">
-                      Active
-                    </span>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-              ))}
-              {isOrganizationAdmin && (
-                <td className="block pt-3 md:table-cell md:px-4 md:py-4">
-                  <div className="flex gap-2 md:justify-end">
-                    <button className="btn-secondary flex-1 px-4 py-3 text-sm md:flex-none">
-                      Make Default
-                    </button>
-                    <button className="btn-secondary flex-1 px-4 py-3 text-sm md:flex-none">
-                      Edit
-                    </button>
-                    <button className="btn-secondary flex-1 px-4 py-3 text-sm md:flex-none">
-                      Remove
-                    </button>
-                  </div>
-                </td>
-              )}
-            </tr>
-          </tbody>
-        </table>
+            <tbody>
+              {/* Placeholder row — replace with mapped payment method data later */}
+              <tr className="stacked-row">
+                {paymentColumns.map((col) => (
+                  <td
+                    key={col.key}
+                    className="stacked-cell @table-compact:whitespace-nowrap"
+                  >
+                    <span className="stacked-label">{col.label}</span>
+                    {col.key === "status" ? (
+                      <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold">
+                        Active
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                ))}
+                {isOrganizationAdmin && (
+                  <td className="stacked-actions">
+                    <div className="flex gap-2 @table-compact:justify-end">
+                      <button className="btn-secondary flex-1 px-3 py-2 text-xs @table-compact:flex-none">
+                        Make Default
+                      </button>
+                      <button className="btn-secondary flex-1 px-3 py-2 text-xs @table-compact:flex-none">
+                        Edit
+                      </button>
+                      <button className="btn-secondary flex-1 px-3 py-2 text-xs @table-compact:flex-none">
+                        Remove
+                      </button>
+                    </div>
+                  </td>
+                )}
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
         <p className="mt-4 text-xs">
           A method still used by vendor accounts can't be removed until those

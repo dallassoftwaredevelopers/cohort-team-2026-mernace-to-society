@@ -122,11 +122,7 @@ function ProfileSettings({
         </button>
         <div
           id="password-form"
-          className={`grid transition-all duration-300 ease-in-out ${
-            showPasswordForm
-              ? "grid-rows-[1fr] opacity-100"
-              : "grid-rows-[0fr] opacity-0"
-          }`}
+          className={showPasswordForm ? "grid" : "hidden"}
           inert={!showPasswordForm}
         >
           <div className="overflow-hidden">
@@ -154,7 +150,7 @@ function ProfileSettings({
                         className={inputClass}
                       />
 
-                      { id === "confirm_new_password" && (
+                      {id === "confirm_new_password" && (
                         <PasswordHint password={passwords.new_password} />
                       )}
                     </div>
@@ -185,12 +181,14 @@ function ProfileSettings({
 
             <Link
               to="/forgot-password"
-              state={{ email: authUser?.email ?? profile?.email ?? "", from: "/settings" }}
-              className="mt-2 inline-block text-sm font-semibold text-primary hover:underline"
+              state={{
+                email: authUser?.email ?? profile?.email ?? "",
+                from: "/settings",
+              }}
+              className="link mt-2 inline-block text-sm"
             >
               Forgot password?
             </Link>
-
           </div>
         </div>
       </section>

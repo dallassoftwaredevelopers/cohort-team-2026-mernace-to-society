@@ -8,11 +8,8 @@ import { canManageRecords } from "../utils/permissions";
 import StatusBadge from "../components/StatusBadge";
 import { formatCurrency, formatDate } from "../utils/format";
 
-// Below md each row becomes a card with a label beside every value
-const stackedRowClassName =
-  "mb-3 block rounded-lg bg-white p-4 md:mb-0 md:table-row md:rounded-none md:border-t md:border-secondary md:bg-transparent md:p-0";
-const stackedCellClassName =
-  "flex justify-between gap-4 py-1 md:table-cell md:px-4 md:py-3";
+const stackedRowClassName = "stacked-row";
+const stackedCellClassName = "stacked-cell";
 
 function PropertyDetailsPage() {
   const { propertyId } = useParams();
@@ -229,109 +226,103 @@ function PropertyDetailsPage() {
               </button>
             </div>
 
-            <table className="mt-4 w-full text-left text-sm">
-              {/* Column headers only show from md up; cards use inline labels */}
-              <thead className="hidden md:table-header-group">
-                <tr className="text-xs uppercase">
-                  <th className="px-4 py-3">Invoice</th>
-                  <th className="px-4 py-3">Vendor</th>
-                  <th className="px-4 py-3">Issue Date</th>
-                  <th className="px-4 py-3">Due Date</th>
-                  <th className="px-4 py-3">Amount</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Actions</th>
-                </tr>
-              </thead>
-
-              <tbody className="block md:table-row-group">
-                {bills.length === 0 ? (
-                  <tr className="block md:table-row">
-                    <td
-                      colSpan="7"
-                      className="block px-4 py-12 text-center text-gray-600 md:table-cell"
-                    >
-                      <p className="font-semibold">
-                        No bills for this property yet.
-                      </p>
-                      <p className="mt-2">Add a bill to get started.</p>
-                    </td>
+            <div className="table-card mt-4">
+              <table className="stacked-table">
+                {/* Column headers only show in table view; cards use inline labels */}
+                <thead>
+                  <tr>
+                    <th>Invoice</th>
+                    <th>Vendor</th>
+                    <th>Issue Date</th>
+                    <th>Due Date</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                   </tr>
-                ) : (
-                  bills.map((bill) => (
-                    <tr key={bill.id} className={stackedRowClassName}>
-                      <td
-                        className={`${stackedCellClassName} md:whitespace-nowrap`}
-                      >
-                        <span className="font-semibold md:hidden">Invoice</span>
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/bills/${bill.id}`)}
-                          className="link text-left"
-                        >
-                          {bill.invoice_number || "—"}
-                        </button>
-                      </td>
+                </thead>
 
-                      <td className={stackedCellClassName}>
-                        <span className="font-semibold md:hidden">Vendor</span>
-                        <span className="text-right md:text-left">
-                          {bill.vendor_account?.vendor?.name ||
-                            bill.extracted_vendor_name ||
-                            "—"}
-                          {bill.vendor_account?.service && (
-                            <span className="text-gray-500">
-                              {" "}
-                              · {bill.vendor_account.service}
-                            </span>
-                          )}
-                        </span>
-                      </td>
-
-                      <td
-                        className={`${stackedCellClassName} md:whitespace-nowrap`}
-                      >
-                        <span className="font-semibold md:hidden">
-                          Issue Date
-                        </span>
-                        {formatDate(bill.issue_date)}
-                      </td>
-
-                      <td
-                        className={`${stackedCellClassName} md:whitespace-nowrap`}
-                      >
-                        <span className="font-semibold md:hidden">
-                          Due Date
-                        </span>
-                        {formatDate(bill.due_date)}
-                      </td>
-
-                      <td
-                        className={`${stackedCellClassName} md:whitespace-nowrap`}
-                      >
-                        <span className="font-semibold md:hidden">Amount</span>
-                        {formatCurrency(bill.amount)}
-                      </td>
-
-                      <td className={stackedCellClassName}>
-                        <span className="font-semibold md:hidden">Status</span>
-                        <StatusBadge status={bill.status} />
-                      </td>
-                      <td className="block pt-2 md:table-cell md:px-4 md:py-3">
-                        {bill.status === "approved" && canPay && (
-                          <button
-                            type="button"
-                            // TODO: open the payment flow once payments are built
-                            className="btn-primary w-full px-4 py-2 text-xs md:w-auto"
-                          >
-                            Pay
-                          </button>
-                        )}
+                <tbody>
+                  {bills.length === 0 ? (
+                    <tr className="stacked-message-row">
+                      <td colSpan="7" className="stacked-message">
+                        <p className="font-semibold">
+                          No bills for this property yet.
+                        </p>
+                        <p className="mt-2">Add a bill to get started.</p>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    bills.map((bill) => (
+                      <tr key={bill.id} className={stackedRowClassName}>
+                        <td
+                          className={`${stackedCellClassName} @table:whitespace-nowrap`}
+                        >
+                          <span className="stacked-label">Invoice</span>
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/bills/${bill.id}`)}
+                            className="link text-left"
+                          >
+                            {bill.invoice_number || "—"}
+                          </button>
+                        </td>
+
+                        <td className={stackedCellClassName}>
+                          <span className="stacked-label">Vendor</span>
+                          <span className="text-right @table:text-left">
+                            {bill.vendor_account?.vendor?.name ||
+                              bill.extracted_vendor_name ||
+                              "—"}
+                            {bill.vendor_account?.service && (
+                              <span className="text-gray-500">
+                                {" "}
+                                · {bill.vendor_account.service}
+                              </span>
+                            )}
+                          </span>
+                        </td>
+
+                        <td
+                          className={`${stackedCellClassName} @table:whitespace-nowrap`}
+                        >
+                          <span className="stacked-label">Issue Date</span>
+                          {formatDate(bill.issue_date)}
+                        </td>
+
+                        <td
+                          className={`${stackedCellClassName} @table:whitespace-nowrap`}
+                        >
+                          <span className="stacked-label">Due Date</span>
+                          {formatDate(bill.due_date)}
+                        </td>
+
+                        <td
+                          className={`${stackedCellClassName} @table:whitespace-nowrap`}
+                        >
+                          <span className="stacked-label">Amount</span>
+                          {formatCurrency(bill.amount)}
+                        </td>
+
+                        <td className={stackedCellClassName}>
+                          <span className="stacked-label">Status</span>
+                          <StatusBadge status={bill.status} />
+                        </td>
+                        <td className="stacked-actions">
+                          {bill.status === "approved" && canPay && (
+                            <button
+                              type="button"
+                              className="btn-primary w-full px-4 py-2 text-xs @table:w-auto"
+                            >
+                              Pay
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </section>
         </>
       )}
