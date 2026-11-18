@@ -3,18 +3,24 @@ import { supabase } from "../../utils/supabase";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import mainSplash from "../assets/billioMain.png";
 import PasswordHint from "../components/PasswordHint";
-import { PASSWORD_RULES_ERROR, passwordMeetsRules } from "../../utils/passwordRules";
+import {
+  PASSWORD_RULES_ERROR,
+  passwordMeetsRules,
+} from "../../utils/passwordRules";
 
 const LOGIN_ERROR_MESSAGES = {
   invalid_credentials: "Incorrect email or password.",
-  email_not_confirmed: "Please verify your email before logging in. Check your email for the link.",
-  user_banned: "Your account access is inactive. Contact your organization's administrator for access.",
-  over_request_rate_limit: "Too many attempts. Please wait a few minutes and try again.",
+  email_not_confirmed:
+    "Please verify your email before logging in. Check your email for the link.",
+  user_banned:
+    "Your account access is inactive. Contact your organization's administrator for access.",
+  over_request_rate_limit:
+    "Too many attempts. Please wait a few minutes and try again.",
 };
 
 const LoginPage = () => {
   const [name, setName] = useState("");
-  const [email, setEmail] =useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -23,10 +29,9 @@ const LoginPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const inputClassName =
-  "w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
+  const inputClassName = "input";
 
-  async function handleSubmit(event){
+  async function handleSubmit(event) {
     event.preventDefault();
     setIsSubmitting(true);
     setErrorMessage("");
@@ -69,7 +74,12 @@ const LoginPage = () => {
       }
 
       const { data, error } = result;
-      if (isSignUp && ["user_already_exists", "email_exists", "user_banned"].includes(error?.code)) {
+      if (
+        isSignUp &&
+        ["user_already_exists", "email_exists", "user_banned"].includes(
+          error?.code,
+        )
+      ) {
         setInfoMessage("Check your email for next steps.");
         setPassword("");
         setConfirmPassword("");
@@ -87,7 +97,8 @@ const LoginPage = () => {
         }
 
         setErrorMessage(
-          LOGIN_ERROR_MESSAGES[error.code] ?? "Could not log in. Please try again."
+          LOGIN_ERROR_MESSAGES[error.code] ??
+            "Could not log in. Please try again.",
         );
         return;
       }
@@ -99,7 +110,9 @@ const LoginPage = () => {
 
       if (isSignUp) {
         if (data.session) {
-          setErrorMessage("Email confirmation is not configured. Contact your administrator.");
+          setErrorMessage(
+            "Email confirmation is not configured. Contact your administrator.",
+          );
           return;
         }
         setInfoMessage("Check your email for next steps.");
@@ -120,7 +133,8 @@ const LoginPage = () => {
       setErrorMessage(
         isSignUp
           ? "Could not complete signup. Please try again or contact your administrator."
-          : "Could not log in. Please try again.");
+          : "Could not log in. Please try again.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -135,7 +149,7 @@ const LoginPage = () => {
   }
 
   let logInSignUpSubmitButtonLabel;
-  if (isSignUp){
+  if (isSignUp) {
     if (isSubmitting) {
       logInSignUpSubmitButtonLabel = "Creating account";
     } else {
@@ -153,12 +167,12 @@ const LoginPage = () => {
     <div className="flex justify-center align-center min-h-screen bg-section w-full">
       <main className="flex justify-center items-start min-w-0 max-h-3/4 p-6 bg-section w-full">
         <div className="flex min-w-0 flex-col justify-center bg-section w-1/2 max-w-80 px-4">
-          
-          <img src={mainSplash} 
-          alt="It's logo that says billio with an image above it of a wooden house with three stacks of coins that get progressively larger. Each stack has a plant growing out the top and the background is blue." 
-          className="flex-auto object-contain" 
-          /> 
-          
+          <img
+            src={mainSplash}
+            alt="It's logo that says billio with an image above it of a wooden house with three stacks of coins that get progressively larger. Each stack has a plant growing out the top and the background is blue."
+            className="flex-auto object-contain"
+          />
+
           <p className="mt-6 font-sans max-w-xs text-center text-md text-sidebar-200">
             Track and pay every invoice for every property in one place.
           </p>
@@ -168,20 +182,21 @@ const LoginPage = () => {
           <p className="mt-1 max-w-xs font-serif text-center text-lg text-[#245bc4]">
             More property.
           </p>
-
         </div>
         <div className="flex min-h-screen items-start justify-center bg-section px-4">
           <div className="w-full max-w-sm rounded-xl bg-white p-8 shadow-sm">
-            <h1 className="mt-1 text-2xl font-bold font-serif text-gray-900">
+            <h1 className="page-title mt-1">
               {isSignUp ? "Create Account" : "Log In"}
             </h1>
             <p className="mt-1 font-sans text-sm text-gray-600">
-              {isSignUp ? "Welcome to Billio! Enter your information below to create your new account." : "Welcome back! Enter your details below."}
+              {isSignUp
+                ? "Welcome to Billio! Enter your information below to create your new account."
+                : "Welcome back! Enter your details below."}
             </p>
             <form onSubmit={handleSubmit} className="mt-6 font-sans space-y-4">
               {isSignUp && (
                 <div>
-                  <label htmlFor="full-name" className="mb-1 block text-sm font-medium text-gray-700">
+                  <label htmlFor="full-name" className="label">
                     Full name
                   </label>
                   <input
@@ -197,8 +212,10 @@ const LoginPage = () => {
                   />
                 </div>
               )}
-              <div>  
-                <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">Email</label>
+              <div>
+                <label htmlFor="email" className="label">
+                  Email
+                </label>
                 <input
                   id="email"
                   type="email"
@@ -210,25 +227,28 @@ const LoginPage = () => {
                   className={inputClassName}
                 />
               </div>
-              <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">Password</label>
-              <input
-                id="password"
-                type="password"
-                autoComplete={isSignUp ? "new-password" : "current-password"}
-                required
-                placeholder={isSignUp ? "Create strong password" : "Enter your password"}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className={inputClassName}
-              />
+              <div>
+                <label htmlFor="password" className="label">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  autoComplete={isSignUp ? "new-password" : "current-password"}
+                  required
+                  placeholder={
+                    isSignUp ? "Create strong password" : "Enter your password"
+                  }
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className={inputClassName}
+                />
+              </div>
 
               {isSignUp && (
                 <div>
-                  <label 
-                    htmlFor="confirm-password"
-                    className="mb-1 block text-sm font-medium text-gray-700"
-                  >
-                      Confirm password
+                  <label htmlFor="confirm-password" className="label">
+                    Confirm password
                   </label>
                   <input
                     id="confirm-password"
@@ -240,62 +260,56 @@ const LoginPage = () => {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className={inputClassName}
                   />
-
                 </div>
               )}
-              
+
               {isSignUp && <PasswordHint password={password} />}
-              
+
               {errorMessage && (
-                <p role="alert" className="rounded-md font-sans bg-red-50 px-3 py-2 text-sm text-red-700">
+                <p role="alert" className="alert-error">
                   {errorMessage}
                 </p>
               )}
 
               {infoMessage && (
-                <p role="status" className="rounded-md font-sans bg-green-50 px-3 py-2 text-sm text-green-700">
+                <p role="status" className="alert-success">
                   {infoMessage}
                 </p>
               )}
 
-              <button 
+              <button
                 type="submit"
                 disabled={isSubmitting}
                 className="btn-primary font-sans w-full py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
               >
-                  {logInSignUpSubmitButtonLabel}
+                {logInSignUpSubmitButtonLabel}
               </button>
-
             </form>
 
             <p className="mt-2 text-sm text-gray-600">
-              {isSignUp ? "Already have an account? " : "Don't have an account? "}
+              {isSignUp
+                ? "Already have an account? "
+                : "Don't have an account? "}
 
-              <button
-                type="button"
-                onClick={handleToggleMode}
-                className="font-semibold text-primary hover:underline"
-              >
+              <button type="button" onClick={handleToggleMode} className="link">
                 {isSignUp ? "Log in" : "Sign up"}
               </button>
-
             </p>
-            
+
             {!isSignUp && (
               <Link
                 to="/forgot-password"
                 state={{ email, from: "/login" }}
-                className="block mt-2 text-sm font-semibold text-primary hover:underline"
+                className="link mt-2 block text-sm"
               >
                 Forgot password?
               </Link>
             )}
-
           </div>
         </div>
       </main>
     </div>
-  )
-}
+  );
+};
 
-export default LoginPage
+export default LoginPage;
