@@ -18,14 +18,6 @@ const billColumns = [
   "Actions",
 ];
 
-const cellMessageClassName =
-  "block px-4 py-12 text-center text-gray-600 md:table-cell";
-
-const stackedRowClassName =
-  "mb-4 block rounded-lg bg-white p-4 md:mb-0 md:table-row md:rounded-none md:border-t md:border-secondary md:bg-transparent md:p-0";
-const stackedCellClassName =
-  "flex justify-between gap-4 py-1 md:table-cell md:px-4 md:py-3";
-
 // Status filter values; a ?status= in the URL must be one of these
 const statusOptions = [
   "pending",
@@ -274,143 +266,131 @@ function BillsPage() {
           </p>
         </div>
 
-        <table className="mt-4 w-full text-left text-sm">
-          <thead className="hidden md:table-header-group">
-            <tr className="text-xs uppercase">
-              {billColumns.map((column) => (
-                <th key={column} className="px-4 py-3 font-semibold">
-                  {column}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="block md:table-row-group">
-            {loading ? (
-              <tr className="block md:table-row">
-                <td
-                  colSpan={billColumns.length}
-                  className={cellMessageClassName}
-                >
-                  Loading bills…
-                </td>
+        <div className="table-card mt-4">
+          <table className="stacked-table">
+            <thead>
+              <tr>
+                {billColumns.map((column) => (
+                  <th key={column}>{column}</th>
+                ))}
               </tr>
-            ) : errorMessage ? (
-              <tr className="block md:table-row">
-                <td
-                  colSpan={billColumns.length}
-                  className={`${cellMessageClassName} text-red-700`}
-                >
-                  {errorMessage}
-                </td>
-              </tr>
-            ) : filteredAndSortedBills.length === 0 ? (
-              <tr className="block md:table-row">
-                <td
-                  colSpan={billColumns.length}
-                  className={cellMessageClassName}
-                >
-                  <p className="font-medium text-gray-800">
-                    No bills match your filters
-                  </p>
-                  <p className="mt-2 text-xs text-gray-500">
-                    Try adjusting your property or status filters.
-                  </p>
-                </td>
-              </tr>
-            ) : (
-              filteredAndSortedBills.map((bill) => (
-                <tr key={bill.id} className={stackedRowClassName}>
-                  <td className={stackedCellClassName}>
-                    <span className="font-semibold md:hidden">Invoice #</span>
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/bills/${bill.id}`)}
-                      className="link text-left"
-                    >
-                      {bill.invoice_number ?? "—"}
-                    </button>
-                  </td>
-                  <td className={stackedCellClassName}>
-                    <span className="font-semibold md:hidden">Property</span>
-                    {bill.property?.name ?? "—"}
-                  </td>
-                  <td className={stackedCellClassName}>
-                    <span className="font-semibold md:hidden">Vendor</span>
-                    <span className="text-right md:text-left">
-                      {bill.vendor_account?.vendor?.name ??
-                        bill.extracted_vendor_name ??
-                        "—"}
-                      {bill.vendor_account?.service && (
-                        <span className="text-gray-600">
-                          {" "}
-                          · {bill.vendor_account.service}
-                        </span>
-                      )}
-                    </span>
-                  </td>
-                  <td
-                    className={`${stackedCellClassName} md:whitespace-nowrap`}
-                  >
-                    <span className="font-semibold md:hidden">Issue Date</span>
-                    {formatDate(bill.issue_date)}
-                  </td>
-                  <td
-                    className={`${stackedCellClassName} md:whitespace-nowrap`}
-                  >
-                    <span className="font-semibold md:hidden">Due Date</span>
-                    {formatDate(bill.due_date)}
-                  </td>
-                  <td
-                    className={`${stackedCellClassName} md:whitespace-nowrap`}
-                  >
-                    <span className="font-semibold md:hidden">Amount</span>
-                    {formatCurrency(bill.amount)}
-                  </td>
-                  <td className={stackedCellClassName}>
-                    <span className="font-semibold md:hidden">Status</span>
-                    <StatusBadge status={bill.status} />
-                  </td>
-                  <td className="block pt-2 md:table-cell md:px-4 md:py-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {canEditRecords && bill.status === "pending" && (
-                        <button
-                          type="button"
-                          onClick={() => setEditingBill(bill)}
-                          className="btn-secondary w-full px-4 py-2 text-xs md:w-auto"
-                        >
-                          Edit
-                        </button>
-                      )}
-                      {/* Unfinished bills open their page, which has the
-                          add property / vendor account helpers */}
-                      {canEditRecords &&
-                        ["needs_review", "extraction_failed"].includes(
-                          bill.status,
-                        ) && (
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/bills/${bill.id}`)}
-                            className="btn-secondary w-full px-4 py-2 text-xs md:w-auto"
-                          >
-                            Finish
-                          </button>
-                        )}
-                      {canEditRecords && bill.status === "approved" && (
-                        <button
-                          type="button"
-                          // TODO: open the payment flow once payments are built
-                          className="btn-primary w-full px-4 py-2 text-xs md:w-auto"
-                        >
-                          Pay
-                        </button>
-                      )}
-                    </div>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr className="stacked-message-row">
+                  <td colSpan={billColumns.length} className="stacked-message">
+                    Loading bills…
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : errorMessage ? (
+                <tr className="stacked-message-row">
+                  <td
+                    colSpan={billColumns.length}
+                    className="stacked-message text-red-700"
+                  >
+                    {errorMessage}
+                  </td>
+                </tr>
+              ) : filteredAndSortedBills.length === 0 ? (
+                <tr className="stacked-message-row">
+                  <td colSpan={billColumns.length} className="stacked-message">
+                    <p className="font-medium text-gray-800">
+                      No bills match your filters
+                    </p>
+                    <p className="mt-2 text-xs text-gray-500">
+                      Try adjusting your property or status filters.
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                filteredAndSortedBills.map((bill) => (
+                  <tr key={bill.id} className="stacked-row">
+                    <td className="stacked-cell">
+                      <span className="stacked-label">Invoice #</span>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/bills/${bill.id}`)}
+                        className="link text-left"
+                      >
+                        {bill.invoice_number ?? "—"}
+                      </button>
+                    </td>
+                    <td className="stacked-cell">
+                      <span className="stacked-label">Property</span>
+                      {bill.property?.name ?? "—"}
+                    </td>
+                    <td className="stacked-cell">
+                      <span className="stacked-label">Vendor</span>
+                      <span className="text-right @table:text-left">
+                        {bill.vendor_account?.vendor?.name ??
+                          bill.extracted_vendor_name ??
+                          "—"}
+                        {bill.vendor_account?.service && (
+                          <span className="text-gray-600">
+                            {" "}
+                            · {bill.vendor_account.service}
+                          </span>
+                        )}
+                      </span>
+                    </td>
+                    <td className="stacked-cell @table:whitespace-nowrap">
+                      <span className="stacked-label">Issue Date</span>
+                      {formatDate(bill.issue_date)}
+                    </td>
+                    <td className="stacked-cell @table:whitespace-nowrap">
+                      <span className="stacked-label">Due Date</span>
+                      {formatDate(bill.due_date)}
+                    </td>
+                    <td className="stacked-cell @table:whitespace-nowrap">
+                      <span className="stacked-label">Amount</span>
+                      {formatCurrency(bill.amount)}
+                    </td>
+                    <td className="stacked-cell">
+                      <span className="stacked-label">Status</span>
+                      <StatusBadge status={bill.status} />
+                    </td>
+                    <td className="stacked-actions">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {canEditRecords && bill.status === "pending" && (
+                          <button
+                            type="button"
+                            onClick={() => setEditingBill(bill)}
+                            className="btn-secondary w-full px-4 py-2 text-xs @table:w-auto"
+                          >
+                            Edit
+                          </button>
+                        )}
+                        {/* Unfinished bills open their page, which has the
+                          add property / vendor account helpers */}
+                        {canEditRecords &&
+                          ["needs_review", "extraction_failed"].includes(
+                            bill.status,
+                          ) && (
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/bills/${bill.id}`)}
+                              className="btn-secondary w-full px-4 py-2 text-xs @table:w-auto"
+                            >
+                              Finish
+                            </button>
+                          )}
+                        {canEditRecords && bill.status === "approved" && (
+                          <button
+                            type="button"
+                            // TODO: open the payment flow once payments are built
+                            className="btn-primary w-full px-4 py-2 text-xs @table:w-auto"
+                          >
+                            Pay
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       {canEditRecords && editingBill && (
