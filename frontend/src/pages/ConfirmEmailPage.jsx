@@ -18,13 +18,19 @@ function ConfirmEmailPage() {
 
   useEffect(() => {
     if (window.location.hash) {
-      window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
+      window.history.replaceState(
+        window.history.state,
+        "",
+        window.location.pathname + window.location.search,
+      );
     }
   }, []);
 
   async function handleConfirm() {
     if (!confirmation.tokenHash || confirmation.type !== "signup") {
-      setErrorMessage("This confirmation link is invalid. Please request a new one.");
+      setErrorMessage(
+        "This confirmation link is invalid. Please request a new one.",
+      );
       return;
     }
 
@@ -36,16 +42,24 @@ function ConfirmEmailPage() {
         type: "signup",
       });
       if (error) {
-        setErrorMessage("This confirmation link is invalid or has expired. Please request a new one.");
+        setErrorMessage(
+          "This confirmation link is invalid or has expired. Please request a new one.",
+        );
         setStatus("ready");
         return;
       }
       if (!data.user?.email_confirmed_at) {
-        throw new Error("Email confirmation could not be verified. Please try again.");
+        throw new Error(
+          "Email confirmation could not be verified. Please try again.",
+        );
       }
       setStatus("confirmed");
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Could not verify your email. Please try again.");
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not verify your email. Please try again.",
+      );
       setStatus("ready");
     }
   }
@@ -61,12 +75,21 @@ function ConfirmEmailPage() {
         email: email.trim(),
         options: { emailRedirectTo: `${window.location.origin}/confirm-email` },
       });
-      if (error && !["user_not_found", "email_exists", "user_already_exists"].includes(error.code)) {
+      if (
+        error &&
+        !["user_not_found", "email_exists", "user_already_exists"].includes(
+          error.code,
+        )
+      ) {
         throw error;
       }
-      setResendMessage("If a confirmation is needed, check your email for next steps.");
+      setResendMessage(
+        "If a confirmation is needed, check your email for next steps.",
+      );
     } catch {
-      setErrorMessage("Could not request a confirmation email. Please try again or contact your administrator.");
+      setErrorMessage(
+        "Could not request a confirmation email. Please try again or contact your administrator.",
+      );
     } finally {
       setResending(false);
     }
@@ -75,22 +98,39 @@ function ConfirmEmailPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-section px-6">
       <section className="w-full max-w-lg rounded-xl bg-white p-8 shadow-sm">
-        <h1 className="font-serif text-2xl font-bold">
+        <h1 className="page-title">
           {status === "confirmed" ? "Email verified" : "Verify your email"}
         </h1>
         {status === "confirmed" ? (
           <p role="status" className="mt-4 text-sm">
-            Thanks for verifying your email. Contact your administrator to activate your account.
+            Thanks for verifying your email. Contact your administrator to
+            activate your account.
           </p>
         ) : (
           <>
-            <p className="mt-4 text-sm">Confirm your email to verify your account.</p>
-            {errorMessage && <p role="alert" className="mt-4 text-sm text-red-700">{errorMessage}</p>}
-            <button type="button" className="btn-primary mt-6 px-5 py-3 text-sm disabled:opacity-50" onClick={handleConfirm} disabled={status === "confirming"}>
+            <p className="mt-4 text-sm">
+              Confirm your email to verify your account.
+            </p>
+            {errorMessage && (
+              <p role="alert" className="alert-error mt-4">
+                {errorMessage}
+              </p>
+            )}
+            <button
+              type="button"
+              className="btn-primary mt-6 px-5 py-3 text-sm disabled:opacity-50"
+              onClick={handleConfirm}
+              disabled={status === "confirming"}
+            >
               {status === "confirming" ? "Verifying..." : "Confirm email"}
             </button>
-            <form onSubmit={handleResend} className="mt-6 border-t border-secondary pt-6">
-              <label htmlFor="confirmation-email" className="block text-sm font-semibold">Need a new confirmation email?</label>
+            <form
+              onSubmit={handleResend}
+              className="mt-6 border-t border-secondary pt-6"
+            >
+              <label htmlFor="confirmation-email" className="label">
+                Need a new confirmation email?
+              </label>
               <input
                 id="confirmation-email"
                 type="email"
@@ -98,16 +138,24 @@ function ConfirmEmailPage() {
                 required
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="input"
               />
-              {resendMessage && <p role="status" className="mt-3 text-sm">{resendMessage}</p>}
-              <button type="submit" className="btn-secondary mt-4 px-5 py-3 text-sm disabled:opacity-50" disabled={resending}>
+              {resendMessage && (
+                <p role="status" className="alert-success mt-3">
+                  {resendMessage}
+                </p>
+              )}
+              <button
+                type="submit"
+                className="btn-secondary mt-4 px-5 py-3 text-sm disabled:opacity-50"
+                disabled={resending}
+              >
                 {resending ? "Sending..." : "Send confirmation email"}
               </button>
             </form>
           </>
         )}
-        <Link to="/login" className="mt-6 block text-sm font-semibold text-primary hover:underline">
+        <Link to="/login" className="link mt-6 block text-sm">
           Go to login
         </Link>
       </section>
